@@ -37,6 +37,7 @@ fi
 LOG_DIR="${WORK_DIR}/logs"
 RESULT_FILE="${WORK_DIR}/result.json"
 NODE_RPC_ENDPOINT="tcp://${COMET_RPC_URL#http://}"
+KEYRING_DIR="${NODE_HOME}"
 
 command -v jq >/dev/null 2>&1 || {
   echo "wasm-smoke-test: jq is required" >&2
@@ -127,8 +128,8 @@ if [[ "${USE_EXISTING_NODE}" == "1" ]]; then
 
   uploader_name="${KUDORA_WASM_UPLOADER_KEY_NAME:-wasm-uploader}"
   validator_name="${KUDORA_WASM_VALIDATOR_KEY_NAME:-validator}"
-  uploader_address="$("${BINARY}" keys show "${uploader_name}" --address --keyring-backend test --home "${NODE_HOME}")"
-  validator_address="$("${BINARY}" keys show "${validator_name}" --address --keyring-backend test --home "${NODE_HOME}")"
+  uploader_address="$("${BINARY}" keys show "${uploader_name}" --address --keyring-backend test --keyring-dir "${KEYRING_DIR}" --home "${NODE_HOME}")"
+  validator_address="$("${BINARY}" keys show "${validator_name}" --address --keyring-backend test --keyring-dir "${KEYRING_DIR}" --home "${NODE_HOME}")"
 else
   rm -rf "${NODE_HOME}"
   mkdir -p "${LOG_DIR}"
@@ -139,8 +140,8 @@ else
     --home "${NODE_HOME}" \
     >"${LOG_DIR}/init.stdout" 2>"${LOG_DIR}/init.stderr"
 
-  uploader_json="$("${BINARY}" keys add uploader --keyring-backend test --home "${NODE_HOME}" --output json 2>"${LOG_DIR}/uploader-key.stderr")"
-  validator_json="$("${BINARY}" keys add validator --keyring-backend test --home "${NODE_HOME}" --output json 2>"${LOG_DIR}/validator-key.stderr")"
+  uploader_json="$("${BINARY}" keys add uploader --keyring-backend test --keyring-dir "${KEYRING_DIR}" --home "${NODE_HOME}" --output json 2>"${LOG_DIR}/uploader-key.stderr")"
+  validator_json="$("${BINARY}" keys add validator --keyring-backend test --keyring-dir "${KEYRING_DIR}" --home "${NODE_HOME}" --output json 2>"${LOG_DIR}/validator-key.stderr")"
 
   uploader_address="$(printf '%s\n' "${uploader_json}" | jq -r '.address // empty')"
   validator_address="$(printf '%s\n' "${validator_json}" | jq -r '.address // empty')"
@@ -168,6 +169,7 @@ else
     --chain-id "${CHAIN_ID}" \
     --home "${NODE_HOME}" \
     --keyring-backend test \
+    --keyring-dir "${KEYRING_DIR}" \
     >"${LOG_DIR}/gentx.stdout" 2>"${LOG_DIR}/gentx.stderr"
 
   "${BINARY}" genesis collect-gentxs \
@@ -223,6 +225,7 @@ fi
 store_sync_json="$("${BINARY}" tx wasm store "${WASM_FILE}" \
   --from "${uploader_key_name}" \
   --keyring-backend test \
+  --keyring-dir "${KEYRING_DIR}" \
   --home "${NODE_HOME}" \
   --chain-id "${CHAIN_ID}" \
   --node "${NODE_RPC_ENDPOINT}" \
@@ -257,6 +260,7 @@ instantiate_sync_json="$("${BINARY}" tx wasm instantiate "${code_id}" '{}' \
   --no-admin \
   --from "${uploader_key_name}" \
   --keyring-backend test \
+  --keyring-dir "${KEYRING_DIR}" \
   --home "${NODE_HOME}" \
   --chain-id "${CHAIN_ID}" \
   --node "${NODE_RPC_ENDPOINT}" \
@@ -299,6 +303,7 @@ fi
 execute_sync_json="$("${BINARY}" tx wasm execute "${contract_address}" "{\"change_owner\":{\"owner\":\"${validator_address}\"}}" \
   --from "${uploader_key_name}" \
   --keyring-backend test \
+  --keyring-dir "${KEYRING_DIR}" \
   --home "${NODE_HOME}" \
   --chain-id "${CHAIN_ID}" \
   --node "${NODE_RPC_ENDPOINT}" \

@@ -10,6 +10,7 @@ release_require_docker
 
 primary_tag="$(release_docker_image_tag)"
 alias_tag="$(release_docker_image_latest_rc_tag)"
+docker_platform="$(release_runtime_docker_platform)"
 result_path="${RELEASE_OUT_DIR}/docker-verify.json"
 
 docker image inspect "${primary_tag}" >/dev/null 2>&1 || release_die "phase-17: candidate release image missing: ${primary_tag}"
@@ -36,9 +37,9 @@ jq -e \
   ' "${RELEASE_DOCKER_TMP_DIR}/docker-labels.json" >/dev/null \
   || release_die "phase-17: candidate release image labels are incomplete"
 
-docker run --rm "${primary_tag}" version >/dev/null 2>&1 \
+docker run --rm --platform "${docker_platform}" "${primary_tag}" version >/dev/null 2>&1 \
   || release_die "phase-17: candidate release image failed 'kudorad version'"
-docker run --rm "${primary_tag}" start --help >/dev/null 2>&1 \
+docker run --rm --platform "${docker_platform}" "${primary_tag}" start --help >/dev/null 2>&1 \
   || release_die "phase-17: candidate release image failed 'kudorad start --help'"
 
 ports="$(docker image inspect "${primary_tag}" --format '{{json .Config.ExposedPorts}}')"

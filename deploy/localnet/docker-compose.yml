@@ -3,13 +3,15 @@ services:
     image: ${KUDORA_DOCKER_IMAGE:-kudora/kudorad:localnet}
     container_name: kudora-validator-0
     user: "${LOCALNET_RUNTIME_UID:-65532}:${LOCALNET_RUNTIME_GID:-65532}"
-    working_dir: /home/nonroot
+    working_dir: ${LOCALNET_CONTAINER_WORKDIR:-/tmp}
     environment:
-      HOME: /home/nonroot
+      HOME: ${LOCALNET_CONTAINER_WORKDIR:-/tmp}
+      TMPDIR: ${LOCALNET_CONTAINER_WORKDIR:-/tmp}
+      XDG_CACHE_HOME: ${LOCALNET_CONTAINER_WORKDIR:-/tmp}/.cache
     command:
       - start
       - --home
-      - /home/nonroot/.kudora
+      - ${LOCALNET_CONTAINER_HOME:-/kudora-home}
       - --minimum-gas-prices
       - 0akud
       - --api.enable=true
@@ -36,7 +38,7 @@ services:
       - "8545:8545"
       - "8546:8546"
     volumes:
-      - ../../.localnet/validator0:/home/nonroot/.kudora
+      - ../../.localnet/validator0:${LOCALNET_CONTAINER_HOME:-/kudora-home}
     networks:
       kudora-localnet:
         aliases:

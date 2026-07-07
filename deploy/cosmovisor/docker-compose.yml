@@ -1,18 +1,22 @@
 services:
   kudora-cosmovisor:
     image: ${KUDORA_COSMOVISOR_IMAGE:-kudora/kudorad-cosmovisor:v0.1.0-rc.1}
+    platform: ${COSMOVISOR_DOCKER_PLATFORM:-linux/amd64}
     container_name: kudora-cosmovisor
+    user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
     working_dir: /home/nonroot
     environment:
       HOME: /home/nonroot
+      TMPDIR: /tmp
+      XDG_CACHE_HOME: /tmp/.cache
       DAEMON_NAME: kudorad
-      DAEMON_HOME: /home/nonroot/.kudora
+      DAEMON_HOME: /kudora-home
       DAEMON_RESTART_AFTER_UPGRADE: "true"
       DAEMON_ALLOW_DOWNLOAD_BINARIES: "false"
       UNSAFE_SKIP_BACKUP: "false"
     command:
       - --home
-      - /home/nonroot/.kudora
+      - /kudora-home
       - --minimum-gas-prices
       - 0akud
       - --api.enable=true
@@ -38,7 +42,7 @@ services:
       - "9545:8545"
       - "9546:8546"
     volumes:
-      - ${COSMOVISOR_HOME_HOST:-../../tmp/phase-17-cosmovisor/home}:/home/nonroot/.kudora
+      - ${COSMOVISOR_HOME_HOST:-../../tmp/phase-17-cosmovisor/home}:/kudora-home
     restart: unless-stopped
     networks:
       kudora-cosmovisor:

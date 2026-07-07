@@ -62,7 +62,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-go build -o "${HELPER_BIN}" ./testutil/evm-smoke
+bash "${ROOT_DIR}/scripts/build-evm-smoke-helper.sh" "${HELPER_BIN}"
 
 if [[ "${USE_EXISTING_NODE}" == "1" ]]; then
   SENDER_KEY_FILE="${KUDORA_EVM_SENDER_KEY_FILE:-}"

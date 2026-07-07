@@ -129,7 +129,7 @@ cleanup() {
 trap cleanup EXIT
 
 if [[ "${USE_EXISTING_NODE}" != "1" ]]; then
-  go build -o "${HELPER_BIN}" ./testutil/evm-smoke
+  bash "${ROOT_DIR}/scripts/build-evm-smoke-helper.sh" "${HELPER_BIN}"
 fi
 
 if [[ "${USE_EXISTING_NODE}" == "1" ]]; then

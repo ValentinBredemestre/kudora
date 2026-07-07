@@ -42,6 +42,7 @@ else
 fi
 
 NODE_RPC_ENDPOINT="tcp://${COMET_RPC_URL#http://}"
+KEYRING_DIR="${HOME_DIR}"
 RESULT_FILE="${WORK_DIR}/result.json"
 LOG_DIR="${WORK_DIR}/logs"
 QUERY_DIR="${WORK_DIR}/queries"
@@ -269,7 +270,7 @@ fi
 }
 
 new_owner_address="${NEW_OWNER_ADDRESS}"
-actual_new_owner_address="$("${BINARY}" keys show "${NEW_OWNER_KEY_NAME}" --address --keyring-backend test --home "${HOME_DIR}" 2>"${LOG_DIR}/new-owner-key.stderr")"
+actual_new_owner_address="$("${BINARY}" keys show "${NEW_OWNER_KEY_NAME}" --address --keyring-backend test --keyring-dir "${KEYRING_DIR}" --home "${HOME_DIR}" 2>"${LOG_DIR}/new-owner-key.stderr")"
 [[ "${actual_new_owner_address}" == "${new_owner_address}" ]] || {
   echo "integrity-smoke-test: new owner key/address mismatch (${actual_new_owner_address} != ${new_owner_address})" >&2
   exit 1
@@ -294,6 +295,7 @@ register_tx_json="$(run_tx_json "${LOG_DIR}/register-tenant.json" "${LOG_DIR}/re
   "${BINARY}" tx integrity register-tenant "${TENANT}" \
   --from "${SIGNER_KEY_NAME}" \
   --keyring-backend test \
+  --keyring-dir "${KEYRING_DIR}" \
   --home "${HOME_DIR}" \
   --chain-id "${CHAIN_ID}" \
   --node "${NODE_RPC_ENDPOINT}" \
@@ -310,7 +312,7 @@ wait_for_tx_success "${register_tx_hash}" "${LOG_DIR}/register-tenant-committed.
   echo "integrity-smoke-test: tenant registration did not commit successfully" >&2
   exit 1
 }
-wait_for_tenant_state "${TENANT}" "$("${BINARY}" keys show "${SIGNER_KEY_NAME}" --address --keyring-backend test --home "${HOME_DIR}")" "" "${QUERY_DIR}/tenant-after-register.json" "${LOG_DIR}/tenant-after-register.stderr" || {
+wait_for_tenant_state "${TENANT}" "$("${BINARY}" keys show "${SIGNER_KEY_NAME}" --address --keyring-backend test --keyring-dir "${KEYRING_DIR}" --home "${HOME_DIR}")" "" "${QUERY_DIR}/tenant-after-register.json" "${LOG_DIR}/tenant-after-register.stderr" || {
   echo "integrity-smoke-test: tenant did not become queryable after registration" >&2
   exit 1
 }
@@ -320,6 +322,7 @@ initial_commit_json="$(run_tx_json "${LOG_DIR}/initial-commit.json" "${LOG_DIR}/
   "${BINARY}" tx integrity commit-set "${TENANT}" "${INTEGRITY_TYPE}" "${INITIAL_PERIOD}" "${initial_root}" "${SET_DIR}/initial-records.json" \
   --from "${SIGNER_KEY_NAME}" \
   --keyring-backend test \
+  --keyring-dir "${KEYRING_DIR}" \
   --home "${HOME_DIR}" \
   --chain-id "${CHAIN_ID}" \
   --node "${NODE_RPC_ENDPOINT}" \
@@ -345,6 +348,7 @@ transfer_json="$(run_tx_json "${LOG_DIR}/transfer.json" "${LOG_DIR}/transfer.std
   "${BINARY}" tx integrity transfer-tenant-ownership "${TENANT}" "${new_owner_address}" \
   --from "${SIGNER_KEY_NAME}" \
   --keyring-backend test \
+  --keyring-dir "${KEYRING_DIR}" \
   --home "${HOME_DIR}" \
   --chain-id "${CHAIN_ID}" \
   --node "${NODE_RPC_ENDPOINT}" \
@@ -361,7 +365,7 @@ wait_for_tx_success "${transfer_tx_hash}" "${LOG_DIR}/transfer-committed.json" "
   echo "integrity-smoke-test: ownership transfer transaction did not commit successfully" >&2
   exit 1
 }
-owner_a_address="$("${BINARY}" keys show "${SIGNER_KEY_NAME}" --address --keyring-backend test --home "${HOME_DIR}")"
+owner_a_address="$("${BINARY}" keys show "${SIGNER_KEY_NAME}" --address --keyring-backend test --keyring-dir "${KEYRING_DIR}" --home "${HOME_DIR}")"
 wait_for_tenant_state "${TENANT}" "${owner_a_address}" "${new_owner_address}" "${QUERY_DIR}/tenant-after-transfer.json" "${LOG_DIR}/tenant-after-transfer.stderr" || {
   echo "integrity-smoke-test: tenant did not reflect a pending owner after transfer" >&2
   exit 1
@@ -374,6 +378,7 @@ pending_commit_json="$(run_tx_json "${LOG_DIR}/pending-owner-rejected.json" "${L
   "${BINARY}" tx integrity commit-set "${TENANT}" "${INTEGRITY_TYPE}" "${PENDING_REJECT_PERIOD}" "${pending_reject_root}" "${SET_DIR}/pending-reject-records.json" \
   --from "${NEW_OWNER_KEY_NAME}" \
   --keyring-backend test \
+  --keyring-dir "${KEYRING_DIR}" \
   --home "${HOME_DIR}" \
   --chain-id "${CHAIN_ID}" \
   --node "${NODE_RPC_ENDPOINT}" \
@@ -401,6 +406,7 @@ preaccept_commit_json="$(run_tx_json "${LOG_DIR}/preaccept-commit.json" "${LOG_D
   "${BINARY}" tx integrity commit-set "${TENANT}" "${INTEGRITY_TYPE}" "${PREACCEPT_PERIOD}" "${preaccept_root}" "${SET_DIR}/preaccept-records.json" \
   --from "${SIGNER_KEY_NAME}" \
   --keyring-backend test \
+  --keyring-dir "${KEYRING_DIR}" \
   --home "${HOME_DIR}" \
   --chain-id "${CHAIN_ID}" \
   --node "${NODE_RPC_ENDPOINT}" \
@@ -423,6 +429,7 @@ accept_json="$(run_tx_json "${LOG_DIR}/accept.json" "${LOG_DIR}/accept.stderr" \
   "${BINARY}" tx integrity accept-tenant-ownership "${TENANT}" \
   --from "${NEW_OWNER_KEY_NAME}" \
   --keyring-backend test \
+  --keyring-dir "${KEYRING_DIR}" \
   --home "${HOME_DIR}" \
   --chain-id "${CHAIN_ID}" \
   --node "${NODE_RPC_ENDPOINT}" \
@@ -450,6 +457,7 @@ old_owner_rejected_json="$(run_tx_json "${LOG_DIR}/old-owner-rejected.json" "${L
   "${BINARY}" tx integrity commit-set "${TENANT}" "${INTEGRITY_TYPE}" "${POSTACCEPT_REJECT_PERIOD}" "${postaccept_reject_root}" "${SET_DIR}/postaccept-reject-records.json" \
   --from "${SIGNER_KEY_NAME}" \
   --keyring-backend test \
+  --keyring-dir "${KEYRING_DIR}" \
   --home "${HOME_DIR}" \
   --chain-id "${CHAIN_ID}" \
   --node "${NODE_RPC_ENDPOINT}" \
@@ -477,6 +485,7 @@ postaccept_commit_json="$(run_tx_json "${LOG_DIR}/postaccept-commit.json" "${LOG
   "${BINARY}" tx integrity commit-set "${TENANT}" "${INTEGRITY_TYPE}" "${POSTACCEPT_SUCCESS_PERIOD}" "${postaccept_success_root}" "${SET_DIR}/postaccept-success-records.json" \
   --from "${NEW_OWNER_KEY_NAME}" \
   --keyring-backend test \
+  --keyring-dir "${KEYRING_DIR}" \
   --home "${HOME_DIR}" \
   --chain-id "${CHAIN_ID}" \
   --node "${NODE_RPC_ENDPOINT}" \

@@ -7,7 +7,6 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../common.sh"
 cosmovisor_prepare_dirs
 release_require_command jq
 release_require_command perl
-mainnet_require_binary
 release_require_docker
 release_require_candidate_genesis
 
@@ -17,10 +16,10 @@ docker image inspect "${COSMOVISOR_RELEASE_IMAGE_TAG}" >/dev/null 2>&1 \
 rm -rf "${COSMOVISOR_HOME_DIR}"
 mkdir -p "${COSMOVISOR_HOME_DIR}/cosmovisor/genesis/bin" "${COSMOVISOR_HOME_DIR}/cosmovisor/upgrades" "${COSMOVISOR_LOG_DIR}"
 
-"${KUDORA_BINARY}" init phase17-cosmovisor \
+cosmovisor_run_release init phase17-cosmovisor \
   --chain-id "${MAINNET_CHAIN_ID}" \
   --default-denom "${MAINNET_BASE_DENOM}" \
-  --home "${COSMOVISOR_HOME_DIR}" \
+  --home "${COSMOVISOR_INIT_HOME}" \
   >/dev/null 2>&1
 
 cp "${MAINNET_GENESIS_OUTPUT_PATH}" "${COSMOVISOR_HOME_DIR}/config/genesis.json"
@@ -30,29 +29,37 @@ jq --arg runtime_genesis_time "${runtime_genesis_time}" '.genesis_time = $runtim
   "${COSMOVISOR_HOME_DIR}/config/genesis.json" >"${COSMOVISOR_HOME_DIR}/config/genesis.json.tmp"
 mv "${COSMOVISOR_HOME_DIR}/config/genesis.json.tmp" "${COSMOVISOR_HOME_DIR}/config/genesis.json"
 
-"${KUDORA_BINARY}" keys add "${COSMOVISOR_VALIDATOR_KEY_NAME}" \
+cosmovisor_run_release keys add "${COSMOVISOR_VALIDATOR_KEY_NAME}" \
   --keyring-backend test \
-  --home "${COSMOVISOR_HOME_DIR}" \
+  --keyring-dir "${COSMOVISOR_INIT_HOME}" \
+  --home "${COSMOVISOR_INIT_HOME}" \
   --output json >/dev/null 2>&1
 
-validator_address="$("${KUDORA_BINARY}" keys show "${COSMOVISOR_VALIDATOR_KEY_NAME}" --address --keyring-backend test --home "${COSMOVISOR_HOME_DIR}")"
+validator_address="$(
+  cosmovisor_run_release keys show "${COSMOVISOR_VALIDATOR_KEY_NAME}" \
+    --address \
+    --keyring-backend test \
+    --keyring-dir "${COSMOVISOR_INIT_HOME}" \
+    --home "${COSMOVISOR_INIT_HOME}"
+)"
 
-"${KUDORA_BINARY}" genesis add-genesis-account \
+cosmovisor_run_release genesis add-genesis-account \
   "${validator_address}" \
   "1000000000000000000${MAINNET_BASE_DENOM}" \
-  --home "${COSMOVISOR_HOME_DIR}" \
+  --home "${COSMOVISOR_INIT_HOME}" \
   >/dev/null 2>&1
 
-"${KUDORA_BINARY}" genesis gentx \
+cosmovisor_run_release genesis gentx \
   "${COSMOVISOR_VALIDATOR_KEY_NAME}" \
   "1000000000000000000${MAINNET_BASE_DENOM}" \
   --chain-id "${MAINNET_CHAIN_ID}" \
-  --home "${COSMOVISOR_HOME_DIR}" \
+  --home "${COSMOVISOR_INIT_HOME}" \
   --keyring-backend test \
+  --keyring-dir "${COSMOVISOR_INIT_HOME}" \
   >/dev/null 2>&1
 
-"${KUDORA_BINARY}" genesis collect-gentxs --home "${COSMOVISOR_HOME_DIR}" >/dev/null 2>&1
-"${KUDORA_BINARY}" genesis validate --home "${COSMOVISOR_HOME_DIR}" >/dev/null 2>&1
+cosmovisor_run_release genesis collect-gentxs --home "${COSMOVISOR_INIT_HOME}" >/dev/null 2>&1
+cosmovisor_run_release genesis validate --home "${COSMOVISOR_INIT_HOME}" >/dev/null 2>&1
 
 release_container_id="$(docker create "${COSMOVISOR_RELEASE_IMAGE_TAG}")"
 cleanup_release_container() {

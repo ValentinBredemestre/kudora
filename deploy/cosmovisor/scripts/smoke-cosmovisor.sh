@@ -17,18 +17,20 @@ rm -f "${COSMOVISOR_RESULT_PATH}"
 trap '"${ROOT_DIR}/deploy/cosmovisor/scripts/stop-cosmovisor.sh" >/dev/null 2>&1 || true' EXIT
 
 version_output="$(docker run --rm \
+  --platform "${COSMOVISOR_DOCKER_PLATFORM}" \
   -e HOME=/home/nonroot \
   -e DAEMON_NAME=kudorad \
-  -e DAEMON_HOME=/home/nonroot/.kudora \
+  -e DAEMON_HOME="${COSMOVISOR_RUNTIME_HOME}" \
   -e DAEMON_ALLOW_DOWNLOAD_BINARIES=false \
   -e UNSAFE_SKIP_BACKUP=false \
   -v "${COSMOVISOR_HOME_DIR}:${COSMOVISOR_RUNTIME_HOME}" \
   --entrypoint /usr/local/bin/cosmovisor \
   "${COSMOVISOR_IMAGE_TAG}" version 2>&1)"
 run_version_output="$(docker run --rm \
+  --platform "${COSMOVISOR_DOCKER_PLATFORM}" \
   -e HOME=/home/nonroot \
   -e DAEMON_NAME=kudorad \
-  -e DAEMON_HOME=/home/nonroot/.kudora \
+  -e DAEMON_HOME="${COSMOVISOR_RUNTIME_HOME}" \
   -e DAEMON_ALLOW_DOWNLOAD_BINARIES=false \
   -e UNSAFE_SKIP_BACKUP=false \
   -v "${COSMOVISOR_HOME_DIR}:${COSMOVISOR_RUNTIME_HOME}" \
@@ -48,14 +50,25 @@ done
 
 [[ "${rpc_ready}" == "1" ]] || release_die "phase-17: cosmovisor RPC did not become healthy"
 
-eth_chain_id_response="$(
-  curl -sS \
-    -H 'Content-Type: application/json' \
-    --data '{"jsonrpc":"2.0","method":"eth_chainId","params":[],"id":1}' \
-    "${COSMOVISOR_EVM_RPC_URL}"
-)"
-printf '%s\n' "${eth_chain_id_response}" | jq -e --arg expected "${MAINNET_ETH_CHAIN_ID}" '.error == null and .result == $expected' >/dev/null \
-  || release_die "phase-17: cosmovisor EVM RPC did not return ${MAINNET_ETH_CHAIN_ID}"
+evm_ready=0
+eth_chain_id_response=""
+for _ in $(seq 1 90); do
+  eth_chain_id_response="$(
+    curl -sS \
+      -H 'Content-Type: application/json' \
+      --data '{"jsonrpc":"2.0","method":"eth_chainId","params":[],"id":1}' \
+      "${COSMOVISOR_EVM_RPC_URL}" 2>/dev/null || true
+  )"
+
+  if printf '%s\n' "${eth_chain_id_response}" | jq -e --arg expected "${MAINNET_ETH_CHAIN_ID}" '.error == null and .result == $expected' >/dev/null 2>&1; then
+    evm_ready=1
+    break
+  fi
+
+  sleep 1
+done
+
+[[ "${evm_ready}" == "1" ]] || release_die "phase-17: cosmovisor EVM RPC did not return ${MAINNET_ETH_CHAIN_ID}"
 
 container_user="$(docker inspect "${COSMOVISOR_CONTAINER_NAME}" --format '{{.Config.User}}')"
 [[ -n "${container_user}" && "${container_user}" != "0" && "${container_user}" != "root" ]] \

@@ -43,6 +43,7 @@ if [[ "${LOCALNET_INIT_MODE}" == "docker" ]]; then
   validator_json="$(
     docker_run_localnet_image keys add validator \
       --keyring-backend test \
+      --keyring-dir "${LOCALNET_CONTAINER_HOME}" \
       --home "${LOCALNET_CONTAINER_HOME}" \
       --output json \
       2>"${LOG_DIR}/validator-key.stderr"
@@ -50,6 +51,7 @@ if [[ "${LOCALNET_INIT_MODE}" == "docker" ]]; then
   wasm_uploader_json="$(
     docker_run_localnet_image keys add "${LOCALNET_WASM_UPLOADER_NAME}" \
       --keyring-backend test \
+      --keyring-dir "${LOCALNET_CONTAINER_HOME}" \
       --home "${LOCALNET_CONTAINER_HOME}" \
       --output json \
       2>"${LOG_DIR}/wasm-uploader-key.stderr"
@@ -57,13 +59,14 @@ if [[ "${LOCALNET_INIT_MODE}" == "docker" ]]; then
   integrity_pending_owner_json="$(
     docker_run_localnet_image keys add "${LOCALNET_INTEGRITY_PENDING_OWNER_NAME}" \
       --keyring-backend test \
+      --keyring-dir "${LOCALNET_CONTAINER_HOME}" \
       --home "${LOCALNET_CONTAINER_HOME}" \
       --output json \
       2>"${LOG_DIR}/integrity-pending-owner-key.stderr"
   )"
 else
   ensure_binary
-  go build -o "${HELPER_BIN}" ./testutil/evm-smoke
+  bash "${ROOT_DIR}/scripts/build-evm-smoke-helper.sh" "${HELPER_BIN}"
 
   "${KUDORA_BINARY}" init localnet-validator-0 \
     --chain-id "${LOCALNET_CHAIN_ID}" \
@@ -71,9 +74,9 @@ else
     --home "${LOCALNET_HOME}" \
     >"${LOG_DIR}/init.stdout" 2>"${LOG_DIR}/init.stderr"
 
-  validator_json="$("${KUDORA_BINARY}" keys add validator --keyring-backend test --home "${LOCALNET_HOME}" --output json 2>"${LOG_DIR}/validator-key.stderr")"
-  wasm_uploader_json="$("${KUDORA_BINARY}" keys add "${LOCALNET_WASM_UPLOADER_NAME}" --keyring-backend test --home "${LOCALNET_HOME}" --output json 2>"${LOG_DIR}/wasm-uploader-key.stderr")"
-  integrity_pending_owner_json="$("${KUDORA_BINARY}" keys add "${LOCALNET_INTEGRITY_PENDING_OWNER_NAME}" --keyring-backend test --home "${LOCALNET_HOME}" --output json 2>"${LOG_DIR}/integrity-pending-owner-key.stderr")"
+  validator_json="$("${KUDORA_BINARY}" keys add validator --keyring-backend test --keyring-dir "${LOCALNET_HOME}" --home "${LOCALNET_HOME}" --output json 2>"${LOG_DIR}/validator-key.stderr")"
+  wasm_uploader_json="$("${KUDORA_BINARY}" keys add "${LOCALNET_WASM_UPLOADER_NAME}" --keyring-backend test --keyring-dir "${LOCALNET_HOME}" --home "${LOCALNET_HOME}" --output json 2>"${LOG_DIR}/wasm-uploader-key.stderr")"
+  integrity_pending_owner_json="$("${KUDORA_BINARY}" keys add "${LOCALNET_INTEGRITY_PENDING_OWNER_NAME}" --keyring-backend test --keyring-dir "${LOCALNET_HOME}" --home "${LOCALNET_HOME}" --output json 2>"${LOG_DIR}/integrity-pending-owner-key.stderr")"
 fi
 
 mkdir -p "${LOCALNET_HOME}/smoke"
@@ -135,6 +138,7 @@ if [[ "${LOCALNET_INIT_MODE}" == "docker" ]]; then
     --chain-id "${LOCALNET_CHAIN_ID}" \
     --home "${LOCALNET_CONTAINER_HOME}" \
     --keyring-backend test \
+    --keyring-dir "${LOCALNET_CONTAINER_HOME}" \
     >"${LOG_DIR}/gentx.stdout" 2>"${LOG_DIR}/gentx.stderr"
 
   docker_run_localnet_image genesis collect-gentxs \
@@ -174,6 +178,7 @@ else
     --chain-id "${LOCALNET_CHAIN_ID}" \
     --home "${LOCALNET_HOME}" \
     --keyring-backend test \
+    --keyring-dir "${LOCALNET_HOME}" \
     >"${LOG_DIR}/gentx.stdout" 2>"${LOG_DIR}/gentx.stderr"
 
   "${KUDORA_BINARY}" genesis collect-gentxs \

@@ -2,8 +2,14 @@
 
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+ROOT_DIR="${KUDORA_HOST_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
 source "${ROOT_DIR}/deploy/localnet/scripts/common.sh"
+
+if [[ "${KUDORA_IN_DOCKER:-}" == "1" ]]; then
+  EXPLORER_HOST_ADDRESS="${KUDORA_DOCKER_HOST_ALIAS:-host.docker.internal}"
+else
+  EXPLORER_HOST_ADDRESS="${KUDORA_HOST_ADDRESS:-127.0.0.1}"
+fi
 
 EXPLORERS_DIR="${ROOT_DIR}/deploy/explorers"
 
@@ -14,9 +20,9 @@ BLOCKSCOUT_PROXY_TEMPLATE="${EXPLORERS_DIR}/blockscout/proxy/explorer.conf.templ
 PING_DASHBOARD_DOCKERFILE="${EXPLORERS_DIR}/ping-dashboard/Dockerfile"
 PING_DASHBOARD_CONFIG_FILE="${EXPLORERS_DIR}/ping-dashboard/config/kudora.json"
 
-BLOCKSCOUT_UI_URL="${BLOCKSCOUT_UI_URL:-http://127.0.0.1:4000}"
-BLOCKSCOUT_API_URL="${BLOCKSCOUT_API_URL:-http://127.0.0.1:4000/api/v2}"
-PING_DASHBOARD_UI_URL="${PING_DASHBOARD_UI_URL:-http://127.0.0.1:18088}"
+BLOCKSCOUT_UI_URL="${BLOCKSCOUT_UI_URL:-http://${EXPLORER_HOST_ADDRESS}:4000}"
+BLOCKSCOUT_API_URL="${BLOCKSCOUT_API_URL:-http://${EXPLORER_HOST_ADDRESS}:4000/api/v2}"
+PING_DASHBOARD_UI_URL="${PING_DASHBOARD_UI_URL:-http://${EXPLORER_HOST_ADDRESS}:18088}"
 
 BLOCKSCOUT_RESULT_DIR="${ROOT_DIR}/tmp/phase-14-blockscout"
 BLOCKSCOUT_RESULT_PATH="${BLOCKSCOUT_RESULT_DIR}/result.json"

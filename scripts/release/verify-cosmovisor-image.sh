@@ -9,6 +9,7 @@ release_require_command jq
 release_require_docker
 
 cosmovisor_image_tag="$(release_cosmovisor_image_tag)"
+docker_platform="$(release_runtime_docker_platform)"
 result_path="${RELEASE_OUT_DIR}/cosmovisor-image-verify.json"
 
 docker image inspect "${cosmovisor_image_tag}" >/dev/null 2>&1 \
@@ -27,9 +28,9 @@ printf '%s\n' "${env_json}" | jq -e '
   index("UNSAFE_SKIP_BACKUP=false")
 ' >/dev/null || release_die "phase-17: cosmovisor image default environment is incomplete"
 
-docker run --rm --entrypoint /usr/local/bin/cosmovisor "${cosmovisor_image_tag}" --help >/dev/null 2>&1 \
+docker run --rm --platform "${docker_platform}" --entrypoint /usr/local/bin/cosmovisor "${cosmovisor_image_tag}" --help >/dev/null 2>&1 \
   || release_die "phase-17: cosmovisor image failed 'cosmovisor --help'"
-docker run --rm --entrypoint /usr/local/bin/kudorad "${cosmovisor_image_tag}" version >/dev/null 2>&1 \
+docker run --rm --platform "${docker_platform}" --entrypoint /usr/local/bin/kudorad "${cosmovisor_image_tag}" version >/dev/null 2>&1 \
   || release_die "phase-17: cosmovisor image failed 'kudorad version'"
 
 container_id="$(docker create "${cosmovisor_image_tag}")"
@@ -49,7 +50,7 @@ jq -n \
   --arg verified_at_utc "$(release_now_utc)" \
   --arg image_tag "${cosmovisor_image_tag}" \
   --arg user "${config_user}" \
-  --arg cosmovisor_help_output "$(docker run --rm --entrypoint /usr/local/bin/cosmovisor "${cosmovisor_image_tag}" --help 2>&1)" \
+  --arg cosmovisor_help_output "$(docker run --rm --platform "${docker_platform}" --entrypoint /usr/local/bin/cosmovisor "${cosmovisor_image_tag}" --help 2>&1)" \
   '{
     verified_at_utc: $verified_at_utc,
     image_tag: $image_tag,

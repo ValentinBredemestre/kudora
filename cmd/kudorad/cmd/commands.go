@@ -6,10 +6,16 @@ import (
 
 	"github.com/CosmWasm/wasmd/x/wasm"
 	wasmcli "github.com/CosmWasm/wasmd/x/wasm/client/cli"
+	gogoproto "github.com/cosmos/gogoproto/proto"
 	"github.com/spf13/cast"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"google.golang.org/grpc"
+	"google.golang.org/protobuf/reflect/protoregistry"
 
+	autocliv1 "cosmossdk.io/api/cosmos/autocli/v1"
+	"cosmossdk.io/client/v2/autocli"
+	autocliflag "cosmossdk.io/client/v2/autocli/flag"
 	cmtcli "github.com/cometbft/cometbft/libs/cli"
 
 	dbm "github.com/cosmos/cosmos-db"
@@ -34,8 +40,12 @@ import (
 	sdkserver "github.com/cosmos/cosmos-sdk/server"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
+	bank "github.com/cosmos/cosmos-sdk/x/bank"
+	bankcli "github.com/cosmos/cosmos-sdk/x/bank/client/cli"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	genutilcli "github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
+	gov "github.com/cosmos/cosmos-sdk/x/gov"
+	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 
 	"github.com/Kudora-Labs/kudora/app"
 	integritycli "github.com/Kudora-Labs/kudora/x/integrity/client/cli"
@@ -69,8 +79,8 @@ func initRootCmd(rootCmd *cobra.Command, tempApp *app.App) {
 	rootCmd.AddCommand(
 		cosmosevmcmd.KeyCommands(app.DefaultNodeHome, true),
 		sdkserver.StatusCommand(),
-		queryCommand(),
-		txCommand(),
+		queryCommand(tempApp),
+		txCommand(tempApp),
 	)
 
 	if _, err := srvflags.AddTxFlags(rootCmd); err != nil {
@@ -82,7 +92,69 @@ func addModuleInitFlags(startCmd *cobra.Command) {
 	wasm.AddModuleInitFlags(startCmd)
 }
 
-func queryCommand() *cobra.Command {
+func autoCLIBuilder(tempApp *app.App) (*autocli.Builder, error) {
+	var (
+		mergedFiles autocliflag.FileResolver
+		err         error
+	)
+
+	mergedFiles, err = gogoproto.MergedRegistry()
+	if err != nil {
+		mergedFiles = tempApp.InterfaceRegistry()
+	}
+
+	builder := &autocli.Builder{
+		Builder: autocliflag.Builder{
+			TypeResolver:          protoregistry.GlobalTypes,
+			FileResolver:          mergedFiles,
+			AddressCodec:          tempApp.AccountKeeper.AddressCodec(),
+			ValidatorAddressCodec: tempApp.StakingKeeper.ValidatorAddressCodec(),
+			ConsensusAddressCodec: tempApp.StakingKeeper.ConsensusAddressCodec(),
+		},
+		GetClientConn: func(cmd *cobra.Command) (grpc.ClientConnInterface, error) {
+			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return nil, err
+			}
+			return clientCtx, nil
+		},
+		AddQueryConnFlags: func(c *cobra.Command) {
+			flags.AddQueryFlagsToCmd(c)
+			flags.AddKeyringFlags(c.Flags())
+		},
+		AddTxConnFlags: flags.AddTxFlagsToCmd,
+	}
+
+	return builder, builder.ValidateAndComplete()
+}
+
+func addAutoCLIQueryModule(parent *cobra.Command, moduleName string, descriptor *autocliv1.ServiceCommandDescriptor, builder *autocli.Builder) error {
+	if descriptor == nil {
+		return nil
+	}
+
+	short := descriptor.Short
+	if short == "" {
+		short = "Querying commands for the " + moduleName + " module"
+	}
+
+	moduleCmd := &cobra.Command{
+		Use:                        moduleName,
+		Short:                      short,
+		DisableFlagParsing:         false,
+		SuggestionsMinimumDistance: 2,
+		RunE:                       client.ValidateCmd,
+	}
+
+	if err := builder.AddQueryServiceCommands(moduleCmd, descriptor); err != nil {
+		return err
+	}
+
+	parent.AddCommand(moduleCmd)
+	return nil
+}
+
+func queryCommand(tempApp *app.App) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:                        "query",
 		Aliases:                    []string{"q"},
@@ -103,11 +175,23 @@ func queryCommand() *cobra.Command {
 	cmd.AddCommand(wasm.AppModuleBasic{}.GetQueryCmd())
 	cmd.AddCommand(integritycli.GetQueryCmd())
 
+	builder, err := autoCLIBuilder(tempApp)
+	if err != nil {
+		panic(err)
+	}
+
+	if err := addAutoCLIQueryModule(cmd, banktypes.ModuleName, bank.AppModule{}.AutoCLIOptions().Query, builder); err != nil {
+		panic(err)
+	}
+	if err := addAutoCLIQueryModule(cmd, govtypes.ModuleName, gov.AppModule{}.AutoCLIOptions().Query, builder); err != nil {
+		panic(err)
+	}
+
 	cmd.PersistentFlags().String(flags.FlagChainID, "", "The network chain ID")
 	return cmd
 }
 
-func txCommand() *cobra.Command {
+func txCommand(tempApp *app.App) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:                        "tx",
 		Short:                      "Transactions subcommands",
@@ -127,6 +211,8 @@ func txCommand() *cobra.Command {
 		authcmd.GetDecodeCommand(),
 		authcmd.GetSimulateCmd(),
 	)
+	cmd.AddCommand(bankcli.NewTxCmd(tempApp.AccountKeeper.AddressCodec()))
+	cmd.AddCommand(gov.NewAppModuleBasic(nil).GetTxCmd())
 	cmd.AddCommand(wasm.AppModuleBasic{}.GetTxCmd())
 	cmd.AddCommand(integritycli.GetTxCmd())
 

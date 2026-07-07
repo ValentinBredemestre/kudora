@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+ROOT_DIR="${KUDORA_HOST_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
 cd "${ROOT_DIR}"
 
 source "${ROOT_DIR}/scripts/mainnet/common.sh"
@@ -111,6 +111,11 @@ release_binary_path() {
   printf '%s/%s\n' "$(release_binary_dir "${platform}")" "${RELEASE_BINARY_NAME}"
 }
 
+release_evm_helper_path() {
+  local platform="$1"
+  printf '%s/%s\n' "$(release_binary_dir "${platform}")" "kudora-evm-smoke-helper"
+}
+
 release_wasmvm_lib_dir() {
   local platform="$1"
   printf '%s/lib\n' "$(release_binary_dir "${platform}")"
@@ -124,6 +129,10 @@ release_wasmvm_lib_path() {
 
 release_linux_amd64_platform() {
   printf 'linux-amd64\n'
+}
+
+release_runtime_docker_platform() {
+  printf 'linux/amd64\n'
 }
 
 release_linux_amd64_archive_path() {
