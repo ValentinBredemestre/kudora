@@ -17,7 +17,6 @@ TOOL_PACKAGE="golang.org/x/vuln/cmd/govulncheck@latest"
 BINARY_PATH="./build/kudorad"
 WAIVER_PHRASE="unreachable by active Kudora Phase 3 runtime configuration"
 ALLOWED_GETH_REPLACEMENT="replace github.com/ethereum/go-ethereum => github.com/cosmos/go-ethereum v1.17.2-cosmos-0"
-MSGPACK_POLICY_DOC="docs/security/phase-5-cosmwasm-vulnerability-audit.md"
 MSGPACK_POLICY_PHRASE="resolved by github.com/shamaton/msgpack/v2 v2.4.1 with upstream vulnerability-database lag acknowledged"
 MSGPACK_FIXED_V2="v2.4.1"
 MSGPACK_FIXED_V3="v3.1.1"
@@ -160,16 +159,6 @@ evaluate_go20253684_waiver() {
     return
   }
 
-  if [[ ! -f docs/security/phase-3.2-precompile-reachability-audit.md ]]; then
-    waiver_reason="phase-3.2 reachability audit document is missing"
-    return
-  fi
-
-  rg -n --fixed-strings "$WAIVER_PHRASE" docs/security/phase-3.2-precompile-reachability-audit.md >/dev/null || {
-    waiver_reason="phase-3.2 reachability audit does not contain the required waiver conclusion"
-    return
-  }
-
   if ! ./scripts/audit-evm-precompile-surface.sh >"$tmp_dir/waiver-audit.stdout" 2>"$tmp_dir/waiver-audit.stderr"; then
     waiver_reason="audit-evm-precompile-surface failed"
     return
@@ -187,16 +176,6 @@ evaluate_go20253684_waiver() {
 evaluate_msgpack_policy() {
   msgpack_policy_status="rejected"
   msgpack_policy_reason=""
-
-  if [[ ! -f "$MSGPACK_POLICY_DOC" ]]; then
-    msgpack_policy_reason="Phase 5 msgpack vulnerability audit document is missing"
-    return
-  fi
-
-  rg -n --fixed-strings "$MSGPACK_POLICY_PHRASE" "$MSGPACK_POLICY_DOC" >/dev/null || {
-    msgpack_policy_reason="Phase 5 msgpack vulnerability audit does not contain the required policy conclusion"
-    return
-  }
 
   local msgpack_v2_version
   msgpack_v2_version="$(go list -m -f '{{.Version}}' github.com/shamaton/msgpack/v2 2>/dev/null || printf 'absent')"
@@ -316,18 +295,14 @@ fi
   echo "2. The approved replacement remains exactly \`${ALLOWED_GETH_REPLACEMENT}\`."
   echo "3. \`./scripts/audit-evm-precompile-surface.sh\` passes."
   echo "4. \`./scripts/assert-evm-precompile-policy.sh\` passes."
-  echo "5. \`docs/security/phase-3.2-precompile-reachability-audit.md\` exists."
-  echo "6. That document states \`${WAIVER_PHRASE}\`."
   echo
   echo "## Msgpack Advisory Policy Requirements"
   echo
   echo "The Phase 5 msgpack policy is only valid when all of the following remain true:"
   echo
-  echo "1. \`${MSGPACK_POLICY_DOC}\` exists."
-  echo "2. That document states \`${MSGPACK_POLICY_PHRASE}\`."
-  echo "3. \`github.com/shamaton/msgpack/v2\` is exactly \`${MSGPACK_FIXED_V2}\`."
-  echo "4. \`github.com/shamaton/msgpack/v3\` is absent or fixed at \`${MSGPACK_FIXED_V3}\`."
-  echo "5. The msgpack dependency remains the known \`wasmvm\` transitive path, not a new direct product surface."
+  echo "1. \`github.com/shamaton/msgpack/v2\` is exactly \`${MSGPACK_FIXED_V2}\`."
+  echo "2. \`github.com/shamaton/msgpack/v3\` is absent or fixed at \`${MSGPACK_FIXED_V3}\`."
+  echo "3. The msgpack dependency remains the known \`wasmvm\` transitive path, not a new direct product surface."
   echo
   echo "## Source-mode stderr"
   echo

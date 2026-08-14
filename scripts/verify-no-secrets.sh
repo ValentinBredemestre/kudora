@@ -46,7 +46,7 @@ while IFS= read -r -d '' path; do
     priv_validator_key.json|*/priv_validator_key.json|node_key.json|*/node_key.json|key_seed.json|*/key_seed.json|*.pem|*.key|*.seed|*.mnemonic|.docker/config.json|*/.docker/config.json|docker-config.json|registry-auth.json|cosign.key|*.cosign.key|signing.key|*.sigstore.key)
       printf '%s\n' "$path" >>"$path_matches"
       ;;
-    scripts/verify-no-secrets.sh|scripts/mainnet/inspect-genesis-policy.sh|release/manifest.json|release/checksums.sha256|release/README.md|release/docker/README.md|release/cosmovisor/README.md|docs/release/phase-17-candidate-release-cosmovisor.md|deploy/cosmovisor/env/cosmovisor.env.example|out/phase-0-validation.md|out/phase-0.1-validation.md)
+    scripts/verify-no-secrets.sh|scripts/mainnet/inspect-genesis-policy.sh|deploy/cosmovisor/env/cosmovisor.env.example|out/phase-0-validation.md|out/phase-0.1-validation.md)
       ;;
     *)
       scan_targets+=("$path")

@@ -42,9 +42,4 @@ node_key.json
 priv_validator_key.json
 
 # Release output
-/release/*
-!/release/README.md
-!/release/cosmovisor/
-!/release/cosmovisor/README.md
-!/release/docker/
-!/release/docker/README.md
+/release/
