@@ -1,6 +1,6 @@
 services:
   kudora-cosmovisor:
-    image: ${KUDORA_COSMOVISOR_IMAGE:-kudora/kudorad-cosmovisor:v0.1.0-rc.1}
+    image: ${KUDORA_COSMOVISOR_IMAGE:-kudora/kudorad-cosmovisor:latest-rc}
     platform: ${COSMOVISOR_DOCKER_PLATFORM:-linux/amd64}
     container_name: kudora-cosmovisor
     user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"

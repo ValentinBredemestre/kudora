@@ -9,11 +9,17 @@ release_require_command jq
 release_require_docker
 
 cosmovisor_image_tag="$(release_cosmovisor_image_tag)"
+cosmovisor_alias_tag="$(release_cosmovisor_image_latest_rc_tag)"
 docker_platform="$(release_runtime_docker_platform)"
 result_path="${RELEASE_OUT_DIR}/cosmovisor-image-verify.json"
 
 docker image inspect "${cosmovisor_image_tag}" >/dev/null 2>&1 \
   || release_die "phase-17: cosmovisor image missing; run make cosmovisor-image-build first"
+
+primary_id="$(docker image inspect "${cosmovisor_image_tag}" --format '{{.Id}}')"
+alias_id="$(docker image inspect "${cosmovisor_alias_tag}" --format '{{.Id}}')"
+[[ "${primary_id}" == "${alias_id}" ]] \
+  || release_die "phase-17: cosmovisor Docker tags do not point to the same image"
 
 config_user="$(docker image inspect "${cosmovisor_image_tag}" --format '{{.Config.User}}')"
 [[ -n "${config_user}" && "${config_user}" != "0" && "${config_user}" != "root" ]] \

@@ -5,7 +5,7 @@ This directory documents the Kudora candidate/devnet release pipeline.
 build-specific files are intentionally ignored and must not be edited or
 committed by hand.
 
-- Release version: `v0.1.0-rc.1`
+- Release version: read from `VERSION`
 - Release track: `candidate`
 - Release type: `devnet_candidate`
 - Mainnet launch-ready: `false`

@@ -23,7 +23,7 @@ require_docker_access
 prepare_localnet_dirs
 
 if [[ ! -f "${LOCALNET_HOME}/config/genesis.json" ]]; then
-  "${ROOT_DIR}/deploy/localnet/scripts/init-localnet.sh"
+  (cd "${ROOT_DIR}" && make --no-print-directory localnet-init)
 fi
 
 if ! docker image inspect "${LOCALNET_DOCKER_IMAGE}" >/dev/null 2>&1; then
@@ -31,6 +31,6 @@ if ! docker image inspect "${LOCALNET_DOCKER_IMAGE}" >/dev/null 2>&1; then
 fi
 
 compose up -d "${LOCALNET_STATEFUL_SERVICE}"
-"${ROOT_DIR}/deploy/localnet/scripts/wait-localnet.sh"
+(cd "${ROOT_DIR}" && make --no-print-directory localnet-wait)
 
 echo "localnet-start: PASS (${LOCALNET_STATEFUL_SERVICE})"

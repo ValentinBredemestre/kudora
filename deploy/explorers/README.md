@@ -23,5 +23,3 @@ make explorers-logs
 make explorers-down
 make explorers-reset
 ```
-
-See `docs/docker/phase-14-explorers.md` for the full operating guide.

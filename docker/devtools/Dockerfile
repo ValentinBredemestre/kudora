@@ -2,16 +2,10 @@
 
 ARG GO_VERSION=1.26.4
 ARG DOCKER_CLI_VERSION=28.3.3-cli
-ARG COSMOVISOR_VERSION=v1.6.0
-ARG IGNITE_VERSION=v29.10.1
 
 FROM docker:${DOCKER_CLI_VERSION} AS docker-cli
 
 FROM golang:${GO_VERSION}-bookworm
-
-ARG COSMOVISOR_VERSION
-ARG IGNITE_VERSION
-ARG TARGETARCH=amd64
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -34,35 +28,18 @@ RUN apt-get update \
         libc6-dev-amd64-cross \
         make \
         netcat-openbsd \
+        perl \
         pkg-config \
-        protobuf-compiler \
         procps \
         ripgrep \
         unzip \
-        xz-utils \
         zip \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=docker-cli /usr/local/bin/docker /usr/local/bin/docker
 COPY --from=docker-cli /usr/local/libexec/docker/cli-plugins/ /usr/local/libexec/docker/cli-plugins/
 
-RUN set -euo pipefail; \
-    case "$(dpkg --print-architecture)" in \
-      amd64) ignite_arch="amd64" ;; \
-      arm64) ignite_arch="arm64" ;; \
-      *) echo "unsupported architecture for ignite download" >&2; exit 1 ;; \
-    esac; \
-    ignite_asset="ignite_${IGNITE_VERSION#v}_linux_${ignite_arch}.tar.gz"; \
-    curl -fsSL "https://github.com/ignite/cli/releases/download/${IGNITE_VERSION}/${ignite_asset}" -o /tmp/ignite.tar.gz; \
-    tar -xzf /tmp/ignite.tar.gz -C /tmp; \
-    install -m 0755 /tmp/ignite /usr/local/bin/ignite; \
-    rm -f /tmp/ignite.tar.gz /tmp/ignite
-
 RUN mkdir -p /cache/gomod /cache/go-build /cache/devtools/home /cache/devtools/xdg /cache/devtools/tmp
-
-RUN --mount=type=cache,target=/go/pkg/mod \
-    --mount=type=cache,target=/root/.cache/go-build \
-    GOBIN=/usr/local/bin go install cosmossdk.io/tools/cosmovisor/cmd/cosmovisor@${COSMOVISOR_VERSION}
 
 RUN ln -sf /usr/local/go/bin/go /usr/local/bin/go \
     && ln -sf /usr/local/go/bin/gofmt /usr/local/bin/gofmt

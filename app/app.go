@@ -116,7 +116,6 @@ import (
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
 	corevm "github.com/ethereum/go-ethereum/core/vm"
 
-	"github.com/Kudora-Labs/kudora/docs"
 	integritykeeper "github.com/Kudora-Labs/kudora/x/integrity/keeper"
 	integritymodule "github.com/Kudora-Labs/kudora/x/integrity/module"
 	integritytypes "github.com/Kudora-Labs/kudora/x/integrity/types"
@@ -783,8 +782,6 @@ func (app *App) RegisterAPIRoutes(apiSvr *api.Server, apiConfig serverconfig.API
 	if err := sdkserver.RegisterSwaggerAPI(apiSvr.ClientCtx, apiSvr.Router, apiConfig.Swagger); err != nil {
 		panic(err)
 	}
-
-	docs.RegisterOpenAPIService(Name, apiSvr.Router)
 }
 
 func (app *App) RegisterTxService(clientCtx client.Context) {

@@ -26,8 +26,3 @@ Optional host-assisted debugging mode:
 ```bash
 KUDORA_LOCALNET_INIT_MODE=host make localnet-init
 ```
-
-See `docs/docker/phase-13-localnet.md` for the full operational guide.
-See `docs/docker/phase-13.1-localnet-portability.md` for the portability and bind-mount ownership model.
-See `docs/docker/phase-14-explorers.md` for the optional explorer stack that attaches to the running localnet.
-See `docs/docker/phase-15-monitoring.md` for the optional Prometheus/Grafana monitoring stack that attaches to the same Docker network.

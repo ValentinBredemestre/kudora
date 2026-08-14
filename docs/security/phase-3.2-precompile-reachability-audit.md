@@ -135,4 +135,4 @@ This waiver becomes invalid immediately if any future phase does one of the foll
 - adds dynamic ERC20 precompiles by default
 - switches Kudora to the upstream broad static precompile registry without a new review
 
-Phase 4 may proceed only if `make phase-3.2-validate` passes under this exact policy.
+This policy remains enforced by `make vulncheck`.

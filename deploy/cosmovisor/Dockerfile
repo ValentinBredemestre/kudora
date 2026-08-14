@@ -1,11 +1,11 @@
 # syntax=docker/dockerfile:1.7
 
-ARG RELEASE_IMAGE=kudora/kudorad:v0.1.0-rc.1
+ARG RELEASE_IMAGE=kudora/kudorad:latest-rc
 
 FROM ${RELEASE_IMAGE}
 
 ARG COSMOVISOR_VERSION
-ARG RELEASE_VERSION=v0.1.0-rc.1
+ARG RELEASE_VERSION=candidate
 ARG GIT_COMMIT=unknown
 
 LABEL org.opencontainers.image.title="kudorad-cosmovisor" \

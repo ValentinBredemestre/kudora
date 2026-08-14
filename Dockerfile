@@ -22,13 +22,9 @@ COPY go.mod go.sum ./
 RUN --mount=type=cache,target=/go/pkg/mod \
     go mod download
 
-# Keep documentation, CI and E2E script changes out of the expensive Go build
-# cache key. These are all source trees required by the two binaries below.
+# Copy only the source trees required by the binaries.
 COPY app/ app/
 COPY cmd/ cmd/
-COPY docs/docs.go docs/docs.go
-COPY docs/static/ docs/static/
-COPY docs/template/ docs/template/
 COPY x/ x/
 COPY testutil/evm-smoke/ testutil/evm-smoke/
 
@@ -73,11 +69,7 @@ RUN chmod 0755 /opt/kudora/e2e/*.sh
 
 ENTRYPOINT ["/bin/bash"]
 
-FROM scratch AS release-binary
-
-COPY --from=builder /out/ /out/
-
-FROM gcr.io/distroless/cc-debian12:nonroot
+FROM gcr.io/distroless/cc-debian12:nonroot AS runtime-base
 
 ARG APP_VERSION
 ARG GIT_COMMIT
@@ -96,14 +88,22 @@ LABEL org.opencontainers.image.title="kudorad" \
       io.kudora.release_track="${RELEASE_TRACK}" \
       io.kudora.mainnet_launch_ready="${MAINNET_LAUNCH_READY}"
 
-COPY --from=builder /out/kudorad /usr/local/bin/kudorad
-COPY --from=builder /out/kudora-evm-smoke-helper /usr/local/bin/kudora-evm-smoke-helper
-COPY --from=builder /out/libwasmvm.aarch64.so /usr/lib/libwasmvm.aarch64.so
-COPY --from=builder /out/libwasmvm.x86_64.so /usr/lib/libwasmvm.x86_64.so
-
 EXPOSE 26656 26657 1317 9090 8545 8546
 
 USER nonroot:nonroot
 
 ENTRYPOINT ["/usr/local/bin/kudorad"]
 CMD ["version", "--long"]
+
+FROM runtime-base AS runtime-prebuilt
+
+COPY --from=prebuilt /usr/local/bin/kudorad /usr/local/bin/kudorad
+COPY --from=prebuilt /usr/local/bin/kudora-evm-smoke-helper /usr/local/bin/kudora-evm-smoke-helper
+COPY --from=prebuilt /usr/lib/ /usr/lib/
+
+FROM runtime-base AS runtime
+
+COPY --from=builder /out/kudorad /usr/local/bin/kudorad
+COPY --from=builder /out/kudora-evm-smoke-helper /usr/local/bin/kudora-evm-smoke-helper
+COPY --from=builder /out/libwasmvm.aarch64.so /usr/lib/libwasmvm.aarch64.so
+COPY --from=builder /out/libwasmvm.x86_64.so /usr/lib/libwasmvm.x86_64.so

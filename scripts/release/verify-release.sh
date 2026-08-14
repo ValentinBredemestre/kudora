@@ -90,7 +90,7 @@ do
   [[ -e "${tmp_extract_dir}/${required_path}" ]] || release_die "phase-17: release archive is missing ${required_path}"
 done
 
-tar -xOf "${linux_archive_path}" README.md | rg -n 'CANDIDATE/DEVNET RELEASE|NOT FINAL MAINNET LAUNCH-READY' >/dev/null \
+tar -xOf "${linux_archive_path}" ./README.md | rg -n 'CANDIDATE/DEVNET RELEASE|NOT FINAL MAINNET LAUNCH-READY' >/dev/null \
   || release_die "phase-17: release README is missing the candidate/devnet warning"
 
 tar -tzf "${linux_archive_path}" | rg -n '(^|/)(\.env(\..*)?|priv_validator_key\.json|node_key\.json|key_seed\.json|.*\.pem|.*\.key|.*\.seed|.*\.mnemonic)$' >/dev/null \

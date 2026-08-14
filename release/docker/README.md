@@ -1,10 +1,10 @@
 # Candidate Docker Image
 
-Phase 17 adds local-only candidate release Docker image packaging for Kudora.
+The release version is read from `VERSION`.
 
-- Primary tag: `kudora/kudorad:v0.1.0-rc.1`
+- Primary tag: `kudora/kudorad:v<version>`
 - Alias tag: `kudora/kudorad:latest-rc`
-- Registry push: disabled in this phase
+- Registry push: disabled
 
 The candidate image is validated locally only and remains explicitly marked as
 not mainnet launch-ready.

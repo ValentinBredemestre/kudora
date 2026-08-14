@@ -10,9 +10,6 @@ accounts:
 - name: bob
   coins:
   - 100000000000000000000akud
-client:
-  openapi:
-    path: docs/static/openapi.json
 faucet:
   name: bob
   coins:

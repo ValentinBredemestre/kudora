@@ -7,10 +7,10 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/common.sh"
 release_prepare_dirs
 release_require_command jq
 release_require_docker
-release_require_command cosmovisor
 
 release_image_tag="$(release_docker_image_tag)"
 cosmovisor_image_tag="$(release_cosmovisor_image_tag)"
+cosmovisor_alias_tag="$(release_cosmovisor_image_latest_rc_tag)"
 docker_platform="$(release_runtime_docker_platform)"
 prebuilt_dir="${RELEASE_COSMOVISOR_TMP_DIR}/prebuilt"
 cosmovisor_bin_path="${prebuilt_dir}/usr/local/bin/cosmovisor"
@@ -33,7 +33,11 @@ build_cosmovisor_binary() {
   CGO_ENABLED=0 \
   go install "cosmossdk.io/tools/cosmovisor/cmd/cosmovisor@${COSMOVISOR_VERSION}"
 
-  cp "${cosmovisor_gopath}/bin/linux_amd64/cosmovisor" "${cosmovisor_bin_path}"
+  local built_binary="${cosmovisor_gopath}/bin/linux_amd64/cosmovisor"
+  if [[ ! -f "${built_binary}" ]]; then
+    built_binary="${cosmovisor_gopath}/bin/cosmovisor"
+  fi
+  cp "${built_binary}" "${cosmovisor_bin_path}"
 }
 
 if command -v go >/dev/null 2>&1; then
@@ -51,7 +55,11 @@ else
       export GOARCH=amd64
       export CGO_ENABLED=0
       go install "cosmossdk.io/tools/cosmovisor/cmd/cosmovisor@'"${COSMOVISOR_VERSION}"'"
-      cp /out/gopath/bin/linux_amd64/cosmovisor /out/usr/local/bin/cosmovisor
+      built_binary=/out/gopath/bin/linux_amd64/cosmovisor
+      if [[ ! -f "${built_binary}" ]]; then
+        built_binary=/out/gopath/bin/cosmovisor
+      fi
+      cp "${built_binary}" /out/usr/local/bin/cosmovisor
     '
 fi
 
@@ -61,6 +69,7 @@ docker buildx build \
   --load \
   --platform "${docker_platform}" \
   --tag "${cosmovisor_image_tag}" \
+  --tag "${cosmovisor_alias_tag}" \
   --build-context "prebuilt=${prebuilt_dir}" \
   --build-arg RELEASE_IMAGE="${release_image_tag}" \
   --build-arg COSMOVISOR_VERSION="${COSMOVISOR_VERSION}" \

@@ -23,6 +23,7 @@ RELEASE_APP_NAME="kudora"
 RELEASE_DOCKER_IMAGE_REPOSITORY="kudora/kudorad"
 RELEASE_DOCKER_IMAGE_LATEST_RC_TAG="latest-rc"
 COSMOVISOR_IMAGE_REPOSITORY="kudora/kudorad-cosmovisor"
+COSMOVISOR_IMAGE_LATEST_RC_TAG="latest-rc"
 COSMOVISOR_VERSION="${KUDORA_COSMOVISOR_VERSION:-v1.6.0}"
 
 release_die() {
@@ -153,6 +154,10 @@ release_docker_image_latest_rc_tag() {
 
 release_cosmovisor_image_tag() {
   printf '%s:%s\n' "${COSMOVISOR_IMAGE_REPOSITORY}" "$(release_version_tag)"
+}
+
+release_cosmovisor_image_latest_rc_tag() {
+  printf '%s:%s\n' "${COSMOVISOR_IMAGE_REPOSITORY}" "${COSMOVISOR_IMAGE_LATEST_RC_TAG}"
 }
 
 release_repo_relpath() {

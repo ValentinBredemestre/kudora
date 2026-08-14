@@ -56,8 +56,6 @@ Phase 16 does not implement validator-only governance or any custom governance b
 - `make mainnet-genesis-validate`
 - `make mainnet-genesis-inspect-supply`
 - `make mainnet-genesis-inspect-policy`
-- `make phase-16-validate`
-- `make phase-16.1-validate`
 
 ## Candidate Allocation Status
 

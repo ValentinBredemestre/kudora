@@ -5,7 +5,7 @@ baseline without claiming final mainnet launch readiness.
 
 ## Release Classification
 
-- release version: `v0.1.0-rc.1`
+- release version: read from `VERSION`
 - release track: `candidate`
 - release type: `devnet_candidate`
 - mainnet launch-ready: `false`
@@ -26,8 +26,8 @@ Candidate release packaging produces:
 
 - `release/manifest.json`
 - `release/checksums.sha256`
-- `out/release/kudora-v0.1.0-rc.1-linux-amd64.tar.gz`
-- `out/release/kudora-v0.1.0-rc.1-source-context.zip`
+- `out/release/kudora-v<version>-linux-amd64.tar.gz`
+- `out/release/kudora-v<version>-source-context.zip`
 
 The manifest and checksums are generated build artifacts. They are ignored by
 Git and must be regenerated with `make release-package` for each candidate.
@@ -46,7 +46,7 @@ The Linux package includes:
 
 Phase 17 adds local-only candidate image validation for:
 
-- `kudora/kudorad:v0.1.0-rc.1`
+- `kudora/kudorad:v<version>`
 - `kudora/kudorad:latest-rc`
 
 The image keeps:
