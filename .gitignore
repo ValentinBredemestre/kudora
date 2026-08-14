@@ -21,8 +21,6 @@ key_seed.json
 /dist/
 /release/*
 !/release/README.md
-!/release/manifest.json
-!/release/checksums.sha256
 !/release/docker/
 !/release/docker/README.md
 !/release/cosmovisor/

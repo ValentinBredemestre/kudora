@@ -176,8 +176,8 @@ release_sha256_file() {
 }
 
 release_require_candidate_genesis() {
-  [[ -f "${MAINNET_GENESIS_OUTPUT_PATH}" ]] || release_die "phase-17: candidate genesis missing at ${MAINNET_GENESIS_OUTPUT_PATH}; run make phase-16.1-validate first"
-  [[ -f "${MAINNET_METADATA_OUTPUT_PATH}" ]] || release_die "phase-17: candidate genesis metadata missing at ${MAINNET_METADATA_OUTPUT_PATH}; run make phase-16.1-validate first"
+  [[ -f "${MAINNET_GENESIS_OUTPUT_PATH}" ]] || release_die "phase-17: candidate genesis missing at ${MAINNET_GENESIS_OUTPUT_PATH}; run make mainnet-genesis-build first"
+  [[ -f "${MAINNET_METADATA_OUTPUT_PATH}" ]] || release_die "phase-17: candidate genesis metadata missing at ${MAINNET_METADATA_OUTPUT_PATH}; run make mainnet-genesis-build first"
 
   jq -e '.genesis_template_valid == true' "${MAINNET_METADATA_OUTPUT_PATH}" >/dev/null \
     || release_die "phase-17: Phase 16.1 candidate genesis metadata is invalid; genesis_template_valid must be true"

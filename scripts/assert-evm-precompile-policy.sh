@@ -19,6 +19,7 @@ if [[ ! -x "$BINARY" ]]; then
   exit 1
 fi
 
+mkdir -p "${ROOT_DIR}/tmp"
 rm -rf "$TMP_HOME"
 trap 'rm -rf "$TMP_HOME"' EXIT
 

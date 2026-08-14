@@ -61,7 +61,6 @@ func initRootCmd(rootCmd *cobra.Command, tempApp *app.App) {
 	rootCmd.AddCommand(
 		NewInitCmd(tempApp, tempApp.BasicModuleManager),
 		NewInPlaceTestnetCmd(),
-		NewTestnetMultiNodeCmd(tempApp.BasicModuleManager, banktypes.GenesisBalancesIterator{}),
 		genutilcli.Commands(tempApp.TxConfig(), tempApp.BasicModuleManager, app.DefaultNodeHome),
 		cmtcli.NewCompletionCmd(rootCmd, true),
 		evmdebug.Cmd(),

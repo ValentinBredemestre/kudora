@@ -21,12 +21,22 @@ This document records Kudora's active dependency baseline after the Phase 3 EVM 
 ## Core Dependencies
 
 - Cosmos SDK: `v0.54.3`
-- CometBFT: `v0.39.3`
-- Cosmos EVM: `v0.7.0`
+- CometBFT: `v0.39.4`
+- Cosmos EVM: `v0.7.1`
 - Wasmd: `v0.70.3`
 - wasmvm: `v3.0.7`
 - IBC-Go: `v11.1.0`
 - `go-ethereum` required by Cosmos EVM: `v1.17.0`
+
+The August 2026 upstream review deliberately keeps Cosmos SDK `v0.54.3`, Wasmd
+`v0.70.3`, wasmvm `v3.0.7`, and IBC-Go `v11.1.0`. Cosmos EVM `v0.7.1` and
+CometBFT `v0.39.4` are patch updates on that same compatibility line. IBC-Go
+`v11.2.0` only adds rate-limiting middleware that Kudora does not wire, while
+Wasmd `v0.70.3` still declares IBC-Go `v11.1.0`; Kudora therefore avoids an
+unnecessary independent override.
+
+See `docs/release/upstream-maintenance.md` for the source review and upgrade
+policy.
 
 ## Replace Directives
 
@@ -50,7 +60,7 @@ Current `go.mod` replace directives:
 
 5. `github.com/ethereum/go-ethereum => github.com/cosmos/go-ethereum v1.17.2-cosmos-0`
    Status: allowed, approved Phase 2.1 Cosmos EVM policy exception
-   Reason: required by official upstream `github.com/cosmos/evm v0.7.0` and enforced narrowly by `scripts/verify-no-forks.sh`.
+   Reason: required by official upstream `github.com/cosmos/evm v0.7.1` and enforced narrowly by `scripts/verify-no-forks.sh`.
 
 No replace directive is allowed for:
 
@@ -67,7 +77,7 @@ The only approved exception is:
 
 Allowed only with:
 
-- `github.com/cosmos/evm v0.7.0`
+- `github.com/cosmos/evm v0.7.1`
 
 This exception is approved only because:
 
@@ -124,7 +134,7 @@ Active runtime scope:
 
 Phase 4 and Phase 5 validation helpers:
 
-- use the already-approved upstream `go-ethereum` dependency surface that comes with `github.com/cosmos/evm v0.7.0`
+- use the already-approved upstream `go-ethereum` dependency surface that comes with `github.com/cosmos/evm v0.7.1`
 - add no new fork exception
 - add only the official upstream `github.com/CosmWasm/wasmd` / `github.com/CosmWasm/wasmvm` runtime surface
 - keep contract bytecode and signing logic under `testutil/evm-smoke/` as test-only assets
@@ -192,7 +202,7 @@ scripts to `v1.6.0`.
 
 `github.com/cosmos/ibc-go/v11` appears in the dependency graph because:
 
-- upstream Cosmos EVM `v0.7.0` expects IBC core keeper integration in its broader architecture; and
+- upstream Cosmos EVM `v0.7.1` expects IBC core keeper integration in its broader architecture; and
 - upstream Wasmd `v0.70.3` depends on IBC core interfaces even when Kudora keeps IBC product flows inactive.
 
 Current Kudora status in Phase 5:
@@ -230,7 +240,7 @@ If any future phase activates stateful Cosmos precompiles or ERC20 default preco
 
 `scripts/verify-no-forks.sh` enforces:
 
-- `github.com/cosmos/evm` must be exactly `v0.7.0`
+- `github.com/cosmos/evm` must be exactly `v0.7.1`
 - the only allowed `go-ethereum` replacement is `github.com/cosmos/go-ethereum v1.17.2-cosmos-0`
 - any other `go-ethereum` replacement fails
 - any `replace github.com/CosmWasm/wasmd` or `replace github.com/CosmWasm/wasmvm` fails

@@ -146,9 +146,9 @@ jq \
   '
     .app_state.gov.params.min_deposit = [{denom: $denom, amount: "1000000000000000000"}]
     | .app_state.gov.params.expedited_min_deposit = [{denom: $denom, amount: "2000000000000000000"}]
-    | .app_state.gov.params.expedited_voting_period = "10s"
-    | .app_state.gov.params.max_deposit_period = "15s"
-    | .app_state.gov.params.voting_period = "15s"
+    | .app_state.gov.params.expedited_voting_period = "5s"
+    | .app_state.gov.params.max_deposit_period = "8s"
+    | .app_state.gov.params.voting_period = "8s"
     | .app_state.gov.params.quorum = "0.334000000000000000"
     | .app_state.gov.params.threshold = "0.500000000000000000"
     | .app_state.gov.params.veto_threshold = "0.334000000000000000"
@@ -187,8 +187,8 @@ for index in 0 1 2; do
     -e "s|^persistent_peers = .*|persistent_peers = \"${peers}\"|" \
     -e 's|^addr_book_strict = true|addr_book_strict = false|' \
     -e 's|^allow_duplicate_ip = false|allow_duplicate_ip = true|' \
-    -e 's|^timeout_propose = .*|timeout_propose = "1s"|' \
-    -e 's|^timeout_commit = .*|timeout_commit = "1s"|' \
+    -e 's|^timeout_propose = .*|timeout_propose = "500ms"|' \
+    -e 's|^timeout_commit = .*|timeout_commit = "500ms"|' \
     "${home}/config/config.toml"
 
   if [[ "${index}" == "0" ]]; then

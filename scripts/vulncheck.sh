@@ -150,8 +150,8 @@ evaluate_go20253684_waiver() {
   waiver_status="rejected"
   waiver_reason=""
 
-  rg -n '^\s*github\.com/cosmos/evm v0\.7\.0' go.mod >/dev/null || {
-    waiver_reason="github.com/cosmos/evm is not exactly v0.7.0"
+  rg -n '^\s*github\.com/cosmos/evm v0\.7\.1' go.mod >/dev/null || {
+    waiver_reason="github.com/cosmos/evm is not exactly v0.7.1"
     return
   }
 
@@ -312,7 +312,7 @@ fi
   echo
   echo "The Phase 3.2 waiver is only valid when all of the following remain true:"
   echo
-  echo "1. \`github.com/cosmos/evm\` is exactly \`v0.7.0\`."
+  echo "1. \`github.com/cosmos/evm\` is exactly \`v0.7.1\`."
   echo "2. The approved replacement remains exactly \`${ALLOWED_GETH_REPLACEMENT}\`."
   echo "3. \`./scripts/audit-evm-precompile-surface.sh\` passes."
   echo "4. \`./scripts/assert-evm-precompile-policy.sh\` passes."

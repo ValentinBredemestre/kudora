@@ -171,7 +171,6 @@ cp -R config/mainnet "${source_root}/config/"
 mkdir -p "${source_root}/docs/release" "${source_root}/docs/mainnet"
 cp docs/release/phase-17-candidate-release-cosmovisor.md "${source_root}/docs/release/"
 cp docs/mainnet/phase-16-genesis.md "${source_root}/docs/mainnet/"
-cp scripts/phase-17-validate.sh "${source_root}/scripts/"
 
 rm -f "${source_archive_path}"
 (

@@ -1,6 +1,9 @@
 # Kudora
 
-Kudora is being rebuilt from a clean official Ignite/Cosmos baseline. Phase 0 reset the repository, Phase 0.1 hardened the baseline, Phase 1 added the first Docker and CI layer, Phase 2 selected the official Cosmos EVM path, Phase 2.1 approved the narrow upstream `go-ethereum` dependency exception, Phase 3 integrated the minimal upstream-aligned Cosmos EVM runtime, Phase 3.2 closed the Cosmos EVM precompile reachability blocker, Phase 4 validated EVM transactions and contracts, Phase 5 added a minimal official CosmWasm runtime, Phase 5.1 closed the validation-integrity gap for the CosmWasm baseline, Phase 12 added the first business module `x/integrity`, Phase 12.1-lite added two-step tenant ownership transfer for that module, Phase 13 added a complete contributor-focused Docker localnet for the current Cosmos + EVM + CosmWasm runtime, Phase 13.1 hardened that localnet for Docker-first portability, Phase 14 added local-only Docker explorers for the same validated runtime, Phase 15 added a local-only Docker monitoring stack, Phase 16 / 16.1 prepare and validate the reproducible mainnet genesis pipeline in explicit candidate/template mode, and Phase 17 adds a candidate/devnet release pipeline plus a local Cosmovisor runtime.
+Kudora is a business-focused Cosmos SDK chain with EVM and CosmWasm support.
+It consumes the official upstream protocol projects without carrying a Kudora
+fork of Cosmos SDK, Cosmos EVM, CometBFT, Wasmd, wasmvm, or IBC-Go. Kudora-owned
+features live at the application and business-module layers.
 
 Kudora's official Cosmos chain-id is `kudora_12000-1`. Earlier planning references to `kudora_12000-2` are superseded.
 
@@ -21,7 +24,7 @@ The current repository state preserves these chain parameters:
 
 The current repository baseline includes:
 
-- upstream `github.com/cosmos/evm v0.7.0`
+- upstream `github.com/cosmos/evm v0.7.1`
 - the approved replacement `github.com/ethereum/go-ethereum => github.com/cosmos/go-ethereum v1.17.2-cosmos-0`
 - minimal EVM runtime wiring for:
   - `x/vm`
@@ -152,7 +155,6 @@ make mainnet-genesis-build
 make mainnet-genesis-validate
 make mainnet-genesis-inspect-supply
 make mainnet-genesis-inspect-policy
-make phase-16-validate
 make release-build-binaries
 make release-package
 make release-verify
@@ -161,33 +163,22 @@ make release-docker-verify
 make cosmovisor-image-build
 make cosmovisor-layout-verify
 make cosmovisor-smoke-test
-make phase-17-validate
 make explorers-up
 make explorers-smoke-test
 make explorers-down
 make explorers-reset
 make localnet-down
 make localnet-reset
-make phase-13.1-validate
-make phase-14-validate
-make phase-12-validate
-make phase-12.1-lite-validate
-make phase-15-validate
 make evm-smoke-test
 make evm-transaction-smoke-test
 make evm-contract-smoke-test
 make wasm-smoke-test
-make phase-3-validate
-make phase-3.2-validate
-make phase-4-validate
-make phase-5-validate
-make phase-5.1-validate
-make phase-13-validate
 make zip
 ```
 
 ## Reference Documents
 
+- `docs/release/upstream-maintenance.md`
 - `docs/phase-0-reset.md`
 - `docs/docker/phase-1-docker.md`
 - `docs/docker/phase-13-localnet.md`

@@ -17,6 +17,12 @@ The command builds the images, creates a fresh three-validator network, runs
 all business scenarios, tests consensus failures, prints a report, and leaves
 the recovered network running for inspection.
 
+Docker BuildKit caches downloaded Go modules and compiled packages between
+runs. Changes limited to documentation, CI, or E2E shell scripts reuse the
+compiled binaries; the business scenarios themselves always run against a
+fresh chain state and are never skipped. CI exports the same BuildKit cache to
+GitHub Actions.
+
 ## Business scenarios
 
 1. A native Cosmos `akud` transfer from Alice to Bob is committed and the

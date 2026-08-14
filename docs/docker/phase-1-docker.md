@@ -56,7 +56,7 @@ kudora/kudorad:localnet
 ## Security Notes
 
 - The image runs as a non-root user.
-- The builder keeps `CGO_ENABLED=1` because Kudora now depends on both upstream `github.com/cosmos/evm v0.7.0` and upstream `github.com/CosmWasm/wasmvm/v3`.
+- The builder keeps `CGO_ENABLED=1` because Kudora now depends on both upstream `github.com/cosmos/evm v0.7.1` and upstream `github.com/CosmWasm/wasmvm/v3`.
 - The final image now copies the official prebuilt `libwasmvm` shared libraries from the Go module cache so the non-root runtime can execute CosmWasm contracts without bundling any local node state.
 - The Docker build context excludes Git history, local homes, testnets, logs, release artifacts, zip archives, `.env` files, and common key file patterns.
 - The image does not embed validator state, node homes, secrets, or credentials.

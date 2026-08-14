@@ -1,124 +1,51 @@
-# Copilot Instructions for Kudora
+# Kudora repository instructions
 
-## Project Overview
+Kudora is a business-focused Cosmos SDK chain with EVM and CosmWasm support.
+Keep protocol dependencies on their official upstream repositories; do not add
+Kudora-maintained forks or copy upstream protocol code into this repository.
 
-Kudora is a **Cosmos SDK blockchain with EVM compatibility**. It combines the Cosmos ecosystem (IBC, governance, staking) with Ethereum compatibility (JSON-RPC, smart contracts). The project is built with **Go 1.23+** and follows standard Cosmos SDK patterns.
+## Current baseline
 
-## Architecture & Key Concepts
+- Go: read the exact version from `go.mod` and `Dockerfile`.
+- Cosmos SDK, Cosmos EVM, CometBFT, Wasmd, wasmvm and IBC-Go: read the exact
+  compatible tuple from `go.mod` and `docs/release/dependency-baseline.md`.
+- Binary: `kudorad`.
+- Chain ID: `kudora_12000-1`.
+- Base/display denom: `akud` / `KUD`, with 18 decimals.
+- Bech32 prefix: `kudo`.
+- Kudora-owned business code lives under `x/`; the active custom module is
+  `x/integrity`.
+- IBC packages are transitive integration dependencies; Kudora does not yet
+  expose a production IBC transfer, relayer, packet-forward, rate-limit, ICA,
+  or 08-wasm product flow.
 
-### Chain Configuration
+## Development policy
 
-- **Base Denom**: `akud` (18 decimals, matches Ethereum wei)
-- **Display Denom**: `kudos`
-- **Bech32 Prefix**: `kudo` (accounts: `kudo1...`, validators: `kudovaloper1...`)
-- **Chain ID**: `kudora_12000-1` (mainnet) or `kudora-local-1` (localnet)
-- **Binary**: `kudorad`
+- Prefer official Cosmos APIs and normal application wiring in `app/`.
+- Never add a replace directive for Cosmos SDK, Cosmos EVM, CometBFT, Wasmd,
+  or wasmvm. The narrowly pinned Cosmos-maintained `go-ethereum` replacement
+  required by Cosmos EVM is checked by `scripts/verify-no-forks.sh`.
+- Do not add custom precompiles or activate upstream stateful precompiles
+  without a separate security review.
+- Keep production defaults conservative; local E2E configuration may enable
+  JSON-RPC and contract permissions explicitly.
+- Do not revive milestone-specific `phase-*-validate` scripts. They were
+  removed because they encoded obsolete branches and historical architecture.
 
-### Core Components
+## Validation
 
-- **`app/app.go`**: Main application setup with all Cosmos SDK modules + EVM integration
-- **`cmd/kudorad/`**: CLI binary with standard Cosmos SDK commands + Kudora-specific config
-- **`app/config.go`**: Chain-specific configuration including `ChainsCoinInfo` mapping
-- **EVM Integration**: Uses `github.com/cosmos/evm` for Ethereum compatibility
+The contributor acceptance path is fully Dockerized:
 
-### Module Structure
-
-Standard Cosmos SDK modules plus:
-
-- **EVM module** for Ethereum compatibility
-- **Token Factory** for custom token creation
-- **IBC** for cross-chain communication
-- **CosmWasm** for smart contracts
-- Custom **precompiles** in `app/precompiles.go`
-
-## Development Workflows
-
-### Build & Install
-
-```bash
-make install          # Build and install kudorad binary
-make build           # Build without installing
-go install ./cmd/kudorad  # Direct go install
+```sh
+make e2e
 ```
 
-### Testing
+It creates three validators and validates native transfer, staking, EVM and
+CosmWasm contracts, `x/integrity`, governance, quorum loss, and recovery. It
+requires only Make, Docker, and Docker Compose on the host. Add new user-facing
+business behavior to this suite instead of recreating the removed
+Interchaintest scaffold.
 
-```bash
-make test            # Unit tests
-make test-race       # Race condition testing
-make test-cover      # Coverage testing
-./scripts/test_node.sh  # Local devnet for integration testing
-```
-
-### Local Development
-
-- **Quick devnet**: Use `./scripts/test_node.sh` with env vars:
-  - `CHAIN_ID`, `HOME_DIR`, `BLOCK_TIME`, `CLEAN`, `RPC`, `REST` ports
-- **Interchain testing**: See `interchaintest/` directory for cross-chain scenarios
-- **EVM JSON-RPC**: Enable in `app.toml` for MetaMask/Web3 tools on port 8545
-
-## Key Patterns & Conventions
-
-### Configuration Management
-
-- Chain configs are centralized in `app/app.go` constants
-- Different chain IDs can have different coin info via `ChainsCoinInfo` map
-- SDK config is sealed in `main.go` with Bech32 prefixes
-
-### Import Patterns
-
-```go
-// Cosmos SDK core
-sdk "github.com/cosmos/cosmos-sdk/types"
-"github.com/cosmos/cosmos-sdk/x/auth"
-
-// Cosmos EVM integration
-"github.com/cosmos/evm/x/vm/types"
-evmtypes "github.com/cosmos/evm/x/vm/types"
-
-// IBC
-"github.com/cosmos/ibc-go/v8/modules/apps/transfer"
-
-// Project specific
-"github.com/Kudora-Labs/kudora/app"
-```
-
-### Testing Conventions
-
-- Use `interchaintest/setup.go` patterns for integration tests
-- Test chain ID: `localchain_9000-1`
-- E2E tests in `interchaintest/` use Docker containers
-- Unit tests follow standard Go conventions with `_test.go` suffix
-
-### Module Overrides
-
-The project uses several **replace directives** in `go.mod` for:
-
-- Custom Cosmos SDK fork from Strangelove
-- Custom EVM module integration
-- CosmWasm compatibility fixes
-- Check `go.mod` for current overrides before module updates
-
-## Critical Files for Understanding
-
-- **`app/app.go`** (lines 1-300): Application setup and module registration
-- **`app/config.go`**: Chain-specific configuration
-- **`cmd/kudorad/main.go`**: Binary entry point and SDK config
-- **`go.mod`**: Dependencies and critical replace directives
-- **`interchaintest/setup.go`**: Testing infrastructure patterns
-
-## Development Notes
-
-- **Go version**: Requires Go 1.23+ (see `go.mod`)
-- **Ledger support**: Controlled by `LEDGER_ENABLED` build flag
-- **Cross-compilation**: Windows client builds supported (`make build-windows-client`)
-- **Protocol generation**: Use `./scripts/protocgen.sh` for protobuf updates
-- **EVM compatibility**: Enable JSON-RPC in config for Web3 tooling integration
-
-## When Adding Features
-
-1. **New modules**: Register in `app/app.go` module manager
-2. **CLI commands**: Add to `cmd/kudorad/commands.go`
-3. **Chain params**: Update `app/config.go` if chain-specific
-4. **Integration tests**: Add to `interchaintest/` following existing patterns
-5. **Precompiles**: Implement in `app/precompiles.go` for EVM integration
+Useful focused checks are listed in the root `README.md`. Generated release
+manifests and checksums must come from `make release-package`; do not edit or
+commit them by hand.

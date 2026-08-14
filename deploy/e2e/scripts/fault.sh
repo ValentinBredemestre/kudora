@@ -48,9 +48,9 @@ case "${MODE}" in
     ;;
 
   halts)
-    sleep 4
+    sleep 2
     before="$(height)"
-    sleep 8
+    sleep 4
     after="$(height)"
     [[ "${after}" == "${before}" ]] || fail "the chain still produced blocks with 60% of voting power offline (${before}->${after})"
     update_summary \

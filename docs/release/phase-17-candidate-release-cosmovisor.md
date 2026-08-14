@@ -29,6 +29,9 @@ Candidate release packaging produces:
 - `out/release/kudora-v0.1.0-rc.1-linux-amd64.tar.gz`
 - `out/release/kudora-v0.1.0-rc.1-source-context.zip`
 
+The manifest and checksums are generated build artifacts. They are ignored by
+Git and must be regenerated with `make release-package` for each candidate.
+
 The Linux package includes:
 
 - `bin/kudorad`
@@ -93,7 +96,6 @@ make release-docker-verify
 make cosmovisor-image-build
 make cosmovisor-layout-verify
 make cosmovisor-smoke-test
-make phase-17-validate
 ```
 
 ## Operator Caveat

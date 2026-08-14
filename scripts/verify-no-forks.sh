@@ -6,7 +6,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 GO_MOD_PATH="${KUDORA_GO_MOD_PATH:-go.mod}"
-ALLOWED_COSMOS_EVM_VERSION="v0.7.0"
+ALLOWED_COSMOS_EVM_VERSION="v0.7.1"
 ALLOWED_GETH_REPLACEMENT="github.com/ethereum/go-ethereum => github.com/cosmos/go-ethereum v1.17.2-cosmos-0"
 
 if [[ ! -f "$GO_MOD_PATH" ]]; then
@@ -49,7 +49,7 @@ if [[ -s "$matches_file" ]]; then
   echo "verify-no-forks: forbidden runtime forks or replacements found in go.mod" >&2
   sort -u "$matches_file" >&2
   echo "verify-no-forks: official github.com/CosmWasm/wasmd and github.com/CosmWasm/wasmvm dependencies are allowed only without replace directives" >&2
-  echo "verify-no-forks: the only approved fork exception is github.com/ethereum/go-ethereum => github.com/cosmos/go-ethereum v1.17.2-cosmos-0 when github.com/cosmos/evm v0.7.0 is present" >&2
+  echo "verify-no-forks: the only approved fork exception is github.com/ethereum/go-ethereum => github.com/cosmos/go-ethereum v1.17.2-cosmos-0 when github.com/cosmos/evm ${ALLOWED_COSMOS_EVM_VERSION} is present" >&2
   exit 1
 fi
 

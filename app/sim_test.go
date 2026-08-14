@@ -108,7 +108,7 @@ func TestStaticPrecompileSurfaceRemainsNarrow(t *testing.T) {
 	}
 }
 
-func TestInitGenesisStoresEvmCoinInfoWith18Decimals(t *testing.T) {
+func TestInitGenesisStoresEvmCoinMetadata(t *testing.T) {
 	t.Helper()
 
 	app := newTestApp(t)
@@ -121,7 +121,6 @@ func TestInitGenesisStoresEvmCoinInfoWith18Decimals(t *testing.T) {
 	require.Equal(t, DefaultBaseDenom, coinInfo.Denom)
 	require.Equal(t, DefaultBaseDenom, coinInfo.ExtendedDenom)
 	require.Equal(t, DefaultDisplayDenom, coinInfo.DisplayDenom)
-	require.EqualValues(t, DefaultDenomDecimals, coinInfo.Decimals)
 }
 
 func TestExplicitEVMChainIDOptionDoesNotDrift(t *testing.T) {

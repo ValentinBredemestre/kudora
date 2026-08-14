@@ -1,7 +1,9 @@
 # Kudora Candidate Release
 
-This directory stores the committed metadata for the Kudora candidate/devnet
-release pipeline introduced in Phase 17.
+This directory documents the Kudora candidate/devnet release pipeline.
+`make release-package` generates `manifest.json` and `checksums.sha256`; those
+build-specific files are intentionally ignored and must not be edited or
+committed by hand.
 
 - Release version: `v0.1.0-rc.1`
 - Release track: `candidate`

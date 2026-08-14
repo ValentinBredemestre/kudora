@@ -22,7 +22,15 @@ COPY go.mod go.sum ./
 RUN --mount=type=cache,target=/go/pkg/mod \
     go mod download
 
-COPY . .
+# Keep documentation, CI and E2E script changes out of the expensive Go build
+# cache key. These are all source trees required by the two binaries below.
+COPY app/ app/
+COPY cmd/ cmd/
+COPY docs/docs.go docs/docs.go
+COPY docs/static/ docs/static/
+COPY docs/template/ docs/template/
+COPY x/ x/
+COPY testutil/evm-smoke/ testutil/evm-smoke/
 
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \

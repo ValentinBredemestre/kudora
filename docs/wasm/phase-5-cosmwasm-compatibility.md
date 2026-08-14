@@ -26,13 +26,13 @@ Upstream `wasmd v0.70.3` declares:
 Current Kudora Phase 4 baseline before Phase 5:
 
 - Cosmos SDK: `v0.54.3`
-- CometBFT: `v0.39.3`
+- CometBFT: `v0.39.4`
 - Go baseline: `1.26.4`
-- Cosmos EVM: `github.com/cosmos/evm v0.7.0`
+- Cosmos EVM: `github.com/cosmos/evm v0.7.1`
 
 Decision:
 
-- `wasmd v0.70.3` is compatible with Kudora's current Cosmos SDK `v0.54.3` and CometBFT `v0.39.3` line.
+- `wasmd v0.70.3` is compatible with Kudora's current Cosmos SDK `v0.54.3` and CometBFT `v0.39.x` line.
 - Go `1.26.4` remains acceptable for Kudora's active toolchain baseline.
 - The only dependency alignment required for the official Wasmd line is the already-upstream-compatible `github.com/cosmos/ibc-go/v11 v11.1.0`.
 - A narrow transitive security alignment is also applied:

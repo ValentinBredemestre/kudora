@@ -4,8 +4,10 @@ BUILD_DIR := build
 DOCKER_IMAGE := kudora/kudorad:localnet
 PING_DASHBOARD_IMAGE := kudora/ping-dashboard:localnet
 E2E_COMPOSE := docker compose --project-name kudora-e2e --file deploy/e2e/docker-compose.yml
+E2E_BUILD_CACHE_FROM ?=
+E2E_BUILD_CACHE_TO ?=
 
-.PHONY: build install test tidy lint verify-no-forks verify-clean-reset verify-no-secrets verify-integrity-generic dependency-audit audit-evm-precompile-surface assert-evm-precompile-policy vulncheck phase0-validate phase0.1-validate phase-1-validate phase-2-validate phase-2.1-validate phase-3-validate phase-3.2-validate phase-4-validate phase-5-validate phase-5.1-validate phase-12-validate phase-12.1-lite-validate phase-13-validate phase-13.1-validate phase-14-validate phase-15-validate phase-16-validate phase-16.1-validate phase-17-validate docker-build docker-version docker-smoke-test evm-smoke-test evm-transaction-smoke-test evm-contract-smoke-test wasm-smoke-test integrity-smoke-test localnet-init localnet-up localnet-down localnet-reset localnet-logs localnet-smoke-test e2e e2e-build e2e-init e2e-up e2e-business e2e-fault-tolerance e2e-report e2e-status e2e-logs e2e-down e2e-reset blockscout-up blockscout-down blockscout-reset blockscout-smoke-test ping-dashboard-up ping-dashboard-down ping-dashboard-reset ping-dashboard-smoke-test explorers-up explorers-down explorers-reset explorers-logs explorers-smoke-test monitoring-up monitoring-down monitoring-reset monitoring-logs monitoring-smoke-test mainnet-genesis-build mainnet-genesis-validate mainnet-genesis-inspect-supply mainnet-genesis-inspect-policy release-build-binaries release-package release-verify release-docker-build release-docker-verify cosmovisor-image-build cosmovisor-layout-verify cosmovisor-smoke-test zip
+.PHONY: build install test tidy lint verify-no-forks verify-clean-reset verify-no-secrets verify-integrity-generic dependency-audit audit-evm-precompile-surface assert-evm-precompile-policy vulncheck docker-build docker-version docker-smoke-test evm-smoke-test evm-transaction-smoke-test evm-contract-smoke-test wasm-smoke-test integrity-smoke-test localnet-init localnet-up localnet-down localnet-reset localnet-logs localnet-smoke-test e2e e2e-build e2e-init e2e-up e2e-business e2e-fault-tolerance e2e-report e2e-status e2e-logs e2e-down e2e-reset blockscout-up blockscout-down blockscout-reset blockscout-smoke-test ping-dashboard-up ping-dashboard-down ping-dashboard-reset ping-dashboard-smoke-test explorers-up explorers-down explorers-reset explorers-logs explorers-smoke-test monitoring-up monitoring-down monitoring-reset monitoring-logs monitoring-smoke-test mainnet-genesis-build mainnet-genesis-validate mainnet-genesis-inspect-supply mainnet-genesis-inspect-policy release-build-binaries release-package release-verify release-docker-build release-docker-verify cosmovisor-image-build cosmovisor-layout-verify cosmovisor-smoke-test zip
 
 build:
 	@mkdir -p $(BUILD_DIR)
@@ -46,63 +48,6 @@ assert-evm-precompile-policy:
 
 vulncheck:
 	@./scripts/vulncheck.sh
-
-phase0-validate:
-	@./scripts/phase-0-validate.sh
-
-phase0.1-validate:
-	@./scripts/phase-0.1-validate.sh
-
-phase-1-validate:
-	@./scripts/phase-1-validate.sh
-
-phase-2-validate:
-	@./scripts/phase-2-validate.sh
-
-phase-2.1-validate:
-	@./scripts/phase-2.1-validate.sh
-
-phase-3-validate:
-	@./scripts/phase-3-validate.sh
-
-phase-3.2-validate:
-	@./scripts/phase-3.2-validate.sh
-
-phase-4-validate:
-	@./scripts/phase-4-validate.sh
-
-phase-5-validate:
-	@./scripts/phase-5-validate.sh
-
-phase-5.1-validate:
-	@./scripts/phase-5.1-validate.sh
-
-phase-12-validate:
-	@./scripts/phase-12-validate.sh
-
-phase-12.1-lite-validate:
-	@./scripts/phase-12.1-lite-validate.sh
-
-phase-13-validate:
-	@./scripts/phase-13-validate.sh
-
-phase-13.1-validate:
-	@./scripts/phase-13.1-validate.sh
-
-phase-14-validate:
-	@./scripts/phase-14-validate.sh
-
-phase-15-validate:
-	@./scripts/phase-15-validate.sh
-
-phase-16-validate:
-	@./scripts/phase-16-validate.sh
-
-phase-16.1-validate:
-	@./scripts/phase-16.1-validate.sh
-
-phase-17-validate:
-	@./scripts/phase-17-validate.sh
 
 docker-build:
 	@DOCKER_BUILDKIT=1 docker buildx build --load --tag $(DOCKER_IMAGE) --file Dockerfile .
@@ -177,8 +122,8 @@ e2e:
 	@$(MAKE) --no-print-directory e2e-report
 
 e2e-build:
-	@docker build --tag kudora/kudorad:e2e --file Dockerfile .
-	@docker build --target e2e-runner --tag kudora/e2e-runner:local --file Dockerfile .
+	@DOCKER_BUILDKIT=1 docker buildx build --load $(E2E_BUILD_CACHE_FROM) $(E2E_BUILD_CACHE_TO) --tag kudora/kudorad:e2e --file Dockerfile .
+	@DOCKER_BUILDKIT=1 docker buildx build --load $(E2E_BUILD_CACHE_FROM) $(E2E_BUILD_CACHE_TO) --target e2e-runner --tag kudora/e2e-runner:local --file Dockerfile .
 
 e2e-init:
 	@$(E2E_COMPOSE) run --rm e2e-init

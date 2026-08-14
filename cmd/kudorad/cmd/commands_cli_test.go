@@ -29,7 +29,7 @@ func TestRootCmdExposesExpectedModuleCommands(t *testing.T) {
 		t.Fatal("tx command not found")
 	}
 
-	for _, name := range []string{"bank", "gov", "wasm", "integrity"} {
+	for _, name := range []string{"bank", "gov", "staking", "wasm", "integrity"} {
 		if findSubcommandByName(name, queryCmd.Commands()) == nil {
 			t.Fatalf("query %s command not found", name)
 		}

@@ -4,7 +4,7 @@
 
 - Advisory ID: `GO-2025-3684` / `GHSA-mjfq-3qr2-6g84`
 - Affected module: `github.com/cosmos/evm`
-- Kudora dependency version: `github.com/cosmos/evm v0.7.0`
+- Kudora dependency version: `github.com/cosmos/evm v0.7.1`
 - Public severity: High
 - Public impact summary: partial precompile state writes can survive an error path and lead to incorrect balances or nondeterministic execution
 
@@ -15,7 +15,7 @@ Public version metadata currently differs by source:
 
 For Kudora Phase 3.2, the conservative interpretation is:
 
-- the active upstream stable `v0.7.0` baseline must be treated as affected;
+- the active upstream stable `v0.7.1` baseline must be treated as affected;
 - no stable upstream fixed release is available for automatic adoption in this phase.
 
 ## What The Vulnerability Actually Targets
@@ -29,7 +29,7 @@ It is the Cosmos EVM stateful precompile execution path:
 3. an execution error or gas failure happens after a partial write
 4. the write is not fully rolled back
 
-In upstream `v0.7.0`, the relevant code path is:
+In upstream `v0.7.1`, the relevant code path is:
 
 - `precompiles/common/precompile.go`
   - `RunNativeAction`
