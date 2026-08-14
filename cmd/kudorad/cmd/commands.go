@@ -46,6 +46,8 @@ import (
 	genutilcli "github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
 	gov "github.com/cosmos/cosmos-sdk/x/gov"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
+	staking "github.com/cosmos/cosmos-sdk/x/staking"
+	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
 	"github.com/Kudora-Labs/kudora/app"
 	integritycli "github.com/Kudora-Labs/kudora/x/integrity/client/cli"
@@ -186,6 +188,9 @@ func queryCommand(tempApp *app.App) *cobra.Command {
 	if err := addAutoCLIQueryModule(cmd, govtypes.ModuleName, gov.AppModule{}.AutoCLIOptions().Query, builder); err != nil {
 		panic(err)
 	}
+	if err := addAutoCLIQueryModule(cmd, stakingtypes.ModuleName, staking.AppModule{}.AutoCLIOptions().Query, builder); err != nil {
+		panic(err)
+	}
 
 	cmd.PersistentFlags().String(flags.FlagChainID, "", "The network chain ID")
 	return cmd
@@ -216,8 +221,42 @@ func txCommand(tempApp *app.App) *cobra.Command {
 	cmd.AddCommand(wasm.AppModuleBasic{}.GetTxCmd())
 	cmd.AddCommand(integritycli.GetTxCmd())
 
+	builder, err := autoCLIBuilder(tempApp)
+	if err != nil {
+		panic(err)
+	}
+	if err := addAutoCLITxModule(cmd, stakingtypes.ModuleName, staking.AppModule{}.AutoCLIOptions().Tx, builder); err != nil {
+		panic(err)
+	}
+
 	cmd.PersistentFlags().String(flags.FlagChainID, "", "The network chain ID")
 	return cmd
+}
+
+func addAutoCLITxModule(parent *cobra.Command, moduleName string, descriptor *autocliv1.ServiceCommandDescriptor, builder *autocli.Builder) error {
+	if descriptor == nil {
+		return nil
+	}
+
+	short := descriptor.Short
+	if short == "" {
+		short = "Transaction commands for the " + moduleName + " module"
+	}
+
+	moduleCmd := &cobra.Command{
+		Use:                        moduleName,
+		Short:                      short,
+		DisableFlagParsing:         false,
+		SuggestionsMinimumDistance: 2,
+		RunE:                       client.ValidateCmd,
+	}
+
+	if err := builder.AddMsgServiceCommands(moduleCmd, descriptor); err != nil {
+		return err
+	}
+
+	parent.AddCommand(moduleCmd)
+	return nil
 }
 
 func newApp(

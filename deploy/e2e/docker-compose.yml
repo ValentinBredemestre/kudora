@@ -1,0 +1,125 @@
+x-node: &node
+  image: ${KUDORA_E2E_NODE_IMAGE:-kudora/kudorad:e2e}
+  user: "65532:65532"
+  working_dir: /tmp
+  environment:
+    HOME: /tmp
+    TMPDIR: /tmp
+    XDG_CACHE_HOME: /tmp/.cache
+  volumes:
+    - kudora-e2e-state:/state
+  networks:
+    - kudora-e2e
+  restart: "no"
+  stop_grace_period: 10s
+
+x-tool: &tool
+  image: ${KUDORA_E2E_RUNNER_IMAGE:-kudora/e2e-runner:local}
+  user: "0:0"
+  volumes:
+    - kudora-e2e-state:/state
+  networks:
+    - kudora-e2e
+  profiles:
+    - tools
+
+services:
+  validator-0:
+    <<: *node
+    container_name: kudora-e2e-validator-0
+    command:
+      - start
+      - --home
+      - /state/validator0
+      - --minimum-gas-prices
+      - 0akud
+      - --p2p.laddr
+      - tcp://0.0.0.0:26656
+      - --rpc.laddr
+      - tcp://0.0.0.0:26657
+      - --api.enable=true
+      - --grpc.enable=true
+      - --grpc.address
+      - 0.0.0.0:9090
+      - --grpc-web.enable=false
+      - --json-rpc.enable
+      - --json-rpc.address
+      - 0.0.0.0:8545
+      - --json-rpc.ws-address
+      - 0.0.0.0:8546
+      - --evm.evm-chain-id
+      - "120001"
+    ports:
+      - "27657:26657"
+      - "27717:1317"
+      - "29090:9090"
+      - "28545:8545"
+      - "28546:8546"
+
+  validator-1:
+    <<: *node
+    container_name: kudora-e2e-validator-1
+    command:
+      - start
+      - --home
+      - /state/validator1
+      - --minimum-gas-prices
+      - 0akud
+      - --p2p.laddr
+      - tcp://0.0.0.0:26656
+      - --rpc.laddr
+      - tcp://0.0.0.0:26657
+      - --api.enable=false
+      - --grpc.enable=false
+      - --grpc-web.enable=false
+      - --json-rpc.enable=false
+      - --evm.evm-chain-id
+      - "120001"
+
+  validator-2:
+    <<: *node
+    container_name: kudora-e2e-validator-2
+    command:
+      - start
+      - --home
+      - /state/validator2
+      - --minimum-gas-prices
+      - 0akud
+      - --p2p.laddr
+      - tcp://0.0.0.0:26656
+      - --rpc.laddr
+      - tcp://0.0.0.0:26657
+      - --api.enable=false
+      - --grpc.enable=false
+      - --grpc-web.enable=false
+      - --json-rpc.enable=false
+      - --evm.evm-chain-id
+      - "120001"
+
+  e2e-init:
+    <<: *tool
+    entrypoint:
+      - /opt/kudora/e2e/init.sh
+
+  e2e-business:
+    <<: *tool
+    entrypoint:
+      - /opt/kudora/e2e/business.sh
+
+  e2e-fault:
+    <<: *tool
+    entrypoint:
+      - /opt/kudora/e2e/fault.sh
+
+  e2e-report:
+    <<: *tool
+    entrypoint:
+      - /opt/kudora/e2e/report.sh
+
+volumes:
+  kudora-e2e-state:
+    name: kudora-e2e-state
+
+networks:
+  kudora-e2e:
+    name: kudora-e2e

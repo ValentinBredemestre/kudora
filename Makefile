@@ -3,8 +3,11 @@ OUT_DIR := out
 BUILD_DIR := build
 DOCKER_IMAGE := kudora/kudorad:localnet
 PING_DASHBOARD_IMAGE := kudora/ping-dashboard:localnet
+E2E_NODE_IMAGE := kudora/kudorad:e2e
+E2E_RUNNER_IMAGE := kudora/e2e-runner:local
+E2E_COMPOSE := docker compose --project-name kudora-e2e --file deploy/e2e/docker-compose.yml
 
-.PHONY: build install test tidy lint verify-no-forks verify-clean-reset verify-no-secrets verify-integrity-generic dependency-audit audit-evm-precompile-surface assert-evm-precompile-policy vulncheck phase0-validate phase0.1-validate phase-1-validate phase-2-validate phase-2.1-validate phase-3-validate phase-3.2-validate phase-4-validate phase-5-validate phase-5.1-validate phase-12-validate phase-12.1-lite-validate phase-13-validate phase-13.1-validate phase-14-validate phase-15-validate phase-16-validate phase-16.1-validate phase-17-validate docker-build docker-version docker-smoke-test evm-smoke-test evm-transaction-smoke-test evm-contract-smoke-test wasm-smoke-test integrity-smoke-test localnet-init localnet-up localnet-down localnet-reset localnet-logs localnet-smoke-test blockscout-up blockscout-down blockscout-reset blockscout-smoke-test ping-dashboard-up ping-dashboard-down ping-dashboard-reset ping-dashboard-smoke-test explorers-up explorers-down explorers-reset explorers-logs explorers-smoke-test monitoring-up monitoring-down monitoring-reset monitoring-logs monitoring-smoke-test mainnet-genesis-build mainnet-genesis-validate mainnet-genesis-inspect-supply mainnet-genesis-inspect-policy release-build-binaries release-package release-verify release-docker-build release-docker-verify cosmovisor-image-build cosmovisor-layout-verify cosmovisor-smoke-test zip
+.PHONY: build install test tidy lint verify-no-forks verify-clean-reset verify-no-secrets verify-integrity-generic dependency-audit audit-evm-precompile-surface assert-evm-precompile-policy vulncheck phase0-validate phase0.1-validate phase-1-validate phase-2-validate phase-2.1-validate phase-3-validate phase-3.2-validate phase-4-validate phase-5-validate phase-5.1-validate phase-12-validate phase-12.1-lite-validate phase-13-validate phase-13.1-validate phase-14-validate phase-15-validate phase-16-validate phase-16.1-validate phase-17-validate docker-build docker-version docker-smoke-test evm-smoke-test evm-transaction-smoke-test evm-contract-smoke-test wasm-smoke-test integrity-smoke-test localnet-init localnet-up localnet-down localnet-reset localnet-logs localnet-smoke-test e2e e2e-build e2e-init e2e-up e2e-business e2e-fault-tolerance e2e-report e2e-status e2e-logs e2e-down e2e-reset blockscout-up blockscout-down blockscout-reset blockscout-smoke-test ping-dashboard-up ping-dashboard-down ping-dashboard-reset ping-dashboard-smoke-test explorers-up explorers-down explorers-reset explorers-logs explorers-smoke-test monitoring-up monitoring-down monitoring-reset monitoring-logs monitoring-smoke-test mainnet-genesis-build mainnet-genesis-validate mainnet-genesis-inspect-supply mainnet-genesis-inspect-policy release-build-binaries release-package release-verify release-docker-build release-docker-verify cosmovisor-image-build cosmovisor-layout-verify cosmovisor-smoke-test zip
 
 build:
 	@mkdir -p $(BUILD_DIR)
@@ -165,6 +168,53 @@ localnet-logs:
 
 localnet-smoke-test:
 	@./deploy/localnet/scripts/smoke-localnet.sh
+
+e2e:
+	@$(MAKE) --no-print-directory e2e-reset
+	@$(MAKE) --no-print-directory e2e-build
+	@$(MAKE) --no-print-directory e2e-init
+	@$(MAKE) --no-print-directory e2e-up
+	@$(MAKE) --no-print-directory e2e-business
+	@$(MAKE) --no-print-directory e2e-fault-tolerance
+	@$(MAKE) --no-print-directory e2e-report
+
+e2e-build:
+	@DOCKER_BUILDKIT=1 docker build --tag $(E2E_NODE_IMAGE) --file Dockerfile .
+	@DOCKER_BUILDKIT=1 docker build --target e2e-runner --tag $(E2E_RUNNER_IMAGE) --file Dockerfile .
+
+e2e-init:
+	@KUDORA_E2E_NODE_IMAGE=$(E2E_NODE_IMAGE) KUDORA_E2E_RUNNER_IMAGE=$(E2E_RUNNER_IMAGE) $(E2E_COMPOSE) run --rm e2e-init
+
+e2e-up:
+	@KUDORA_E2E_NODE_IMAGE=$(E2E_NODE_IMAGE) KUDORA_E2E_RUNNER_IMAGE=$(E2E_RUNNER_IMAGE) $(E2E_COMPOSE) up --detach validator-0 validator-1 validator-2
+
+e2e-business:
+	@KUDORA_E2E_NODE_IMAGE=$(E2E_NODE_IMAGE) KUDORA_E2E_RUNNER_IMAGE=$(E2E_RUNNER_IMAGE) $(E2E_COMPOSE) run --rm e2e-business
+
+e2e-fault-tolerance:
+	@set -e; \
+		KUDORA_E2E_NODE_IMAGE=$(E2E_NODE_IMAGE) KUDORA_E2E_RUNNER_IMAGE=$(E2E_RUNNER_IMAGE) $(E2E_COMPOSE) stop validator-2; \
+		trap 'KUDORA_E2E_NODE_IMAGE=$(E2E_NODE_IMAGE) KUDORA_E2E_RUNNER_IMAGE=$(E2E_RUNNER_IMAGE) $(E2E_COMPOSE) start validator-1 validator-2 >/dev/null 2>&1 || true' EXIT; \
+		KUDORA_E2E_NODE_IMAGE=$(E2E_NODE_IMAGE) KUDORA_E2E_RUNNER_IMAGE=$(E2E_RUNNER_IMAGE) $(E2E_COMPOSE) run --rm e2e-fault continues; \
+		KUDORA_E2E_NODE_IMAGE=$(E2E_NODE_IMAGE) KUDORA_E2E_RUNNER_IMAGE=$(E2E_RUNNER_IMAGE) $(E2E_COMPOSE) stop validator-1; \
+		KUDORA_E2E_NODE_IMAGE=$(E2E_NODE_IMAGE) KUDORA_E2E_RUNNER_IMAGE=$(E2E_RUNNER_IMAGE) $(E2E_COMPOSE) run --rm e2e-fault halts; \
+		KUDORA_E2E_NODE_IMAGE=$(E2E_NODE_IMAGE) KUDORA_E2E_RUNNER_IMAGE=$(E2E_RUNNER_IMAGE) $(E2E_COMPOSE) start validator-1 validator-2; \
+		KUDORA_E2E_NODE_IMAGE=$(E2E_NODE_IMAGE) KUDORA_E2E_RUNNER_IMAGE=$(E2E_RUNNER_IMAGE) $(E2E_COMPOSE) run --rm e2e-fault recovers
+
+e2e-report:
+	@KUDORA_E2E_NODE_IMAGE=$(E2E_NODE_IMAGE) KUDORA_E2E_RUNNER_IMAGE=$(E2E_RUNNER_IMAGE) $(E2E_COMPOSE) run --rm e2e-report
+
+e2e-status:
+	@KUDORA_E2E_NODE_IMAGE=$(E2E_NODE_IMAGE) KUDORA_E2E_RUNNER_IMAGE=$(E2E_RUNNER_IMAGE) $(E2E_COMPOSE) ps
+
+e2e-logs:
+	@KUDORA_E2E_NODE_IMAGE=$(E2E_NODE_IMAGE) KUDORA_E2E_RUNNER_IMAGE=$(E2E_RUNNER_IMAGE) $(E2E_COMPOSE) logs --follow validator-0 validator-1 validator-2
+
+e2e-down:
+	@KUDORA_E2E_NODE_IMAGE=$(E2E_NODE_IMAGE) KUDORA_E2E_RUNNER_IMAGE=$(E2E_RUNNER_IMAGE) $(E2E_COMPOSE) down --remove-orphans
+
+e2e-reset:
+	@KUDORA_E2E_NODE_IMAGE=$(E2E_NODE_IMAGE) KUDORA_E2E_RUNNER_IMAGE=$(E2E_RUNNER_IMAGE) $(E2E_COMPOSE) down --volumes --remove-orphans
 
 blockscout-up:
 	@./deploy/explorers/blockscout/scripts/start-blockscout.sh

@@ -110,6 +110,23 @@ files are still required before launch readiness can become true.
 
 ## Validation Commands
 
+### Business end-to-end validation
+
+Run the complete Dockerized three-validator acceptance suite with only Docker,
+Docker Compose, and `make` installed:
+
+```bash
+make e2e
+```
+
+This exercises native transfers, staking, EVM and CosmWasm contract
+deployments, the Kudora integrity ownership flow, governance with two YES votes
+against one NO vote, one-validator continuity, two-validator consensus halt,
+and recovery. It intentionally runs no unit tests. See
+`deploy/e2e/README.md` for individual lifecycle commands and local endpoints.
+
+### Technical validation
+
 ```bash
 make build
 make test

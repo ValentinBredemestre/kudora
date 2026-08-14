@@ -49,6 +49,21 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     cp "${wasmvm_lib_aarch64}" /out/libwasmvm.aarch64.so; \
     cp "${wasmvm_lib_x86_64}" /out/libwasmvm.x86_64.so
 
+FROM debian:bookworm-slim AS e2e-runner
+
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends bash ca-certificates coreutils curl jq sed \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /out/kudorad /usr/local/bin/kudorad
+COPY --from=builder /out/kudora-evm-smoke-helper /usr/local/bin/kudora-evm-smoke-helper
+COPY --from=builder /out/libwasmvm.aarch64.so /usr/lib/libwasmvm.aarch64.so
+COPY --from=builder /out/libwasmvm.x86_64.so /usr/lib/libwasmvm.x86_64.so
+COPY deploy/e2e/scripts/ /opt/kudora/e2e/
+COPY testutil/wasm/reflect_1_5.wasm /opt/kudora/e2e/contracts/reflect_1_5.wasm
+
+ENTRYPOINT ["/bin/bash"]
+
 FROM scratch AS release-binary
 
 COPY --from=builder /out/ /out/
