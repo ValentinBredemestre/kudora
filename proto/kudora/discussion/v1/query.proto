@@ -1,0 +1,93 @@
+syntax = "proto3";
+
+package kudora.discussion.v1;
+
+import "amino/amino.proto";
+import "cosmos/base/query/v1beta1/pagination.proto";
+import "gogoproto/gogo.proto";
+import "google/api/annotations.proto";
+import "kudora/discussion/v1/discussion.proto";
+import "kudora/discussion/v1/params.proto";
+
+option go_package = "github.com/Kudora-Labs/kudora/x/discussion/types";
+
+// Query defines the wallet-independent read API for discussions.
+service Query {
+  // Params returns the current post fee.
+  rpc Params(QueryParamsRequest) returns (QueryParamsResponse) {
+    option (google.api.http).get = "/kudora/discussion/v1/params";
+  }
+  // Message returns one message.
+  rpc Message(QueryMessageRequest) returns (QueryMessageResponse) {
+    option (google.api.http).get = "/kudora/discussion/v1/messages/{proposal_id}/{message_id}";
+  }
+  // Messages returns messages in one proposal scope.
+  rpc Messages(QueryMessagesRequest) returns (QueryMessagesResponse) {
+    option (google.api.http).get = "/kudora/discussion/v1/messages/{proposal_id}";
+  }
+  // Reactions returns canonical reactions for one message.
+  rpc Reactions(QueryReactionsRequest) returns (QueryReactionsResponse) {
+    option (google.api.http).get = "/kudora/discussion/v1/reactions/{proposal_id}/{message_id}";
+  }
+  // Session returns one session authorization by its EVM or bech32 address.
+  rpc Session(QuerySessionRequest) returns (QuerySessionResponse) {
+    option (google.api.http).get = "/kudora/discussion/v1/sessions/{session_address}";
+  }
+}
+
+// QueryParamsRequest is empty.
+message QueryParamsRequest {}
+
+// QueryParamsResponse contains x/discussion params.
+message QueryParamsResponse {
+  Params params = 1 [
+    (gogoproto.nullable) = false,
+    (amino.dont_omitempty) = true
+  ];
+}
+
+// QueryMessageRequest identifies one message.
+message QueryMessageRequest {
+  uint64 proposal_id = 1;
+  uint64 message_id = 2;
+}
+
+// QueryMessageResponse contains one message.
+message QueryMessageResponse {
+  Message message = 1 [(gogoproto.nullable) = false];
+}
+
+// QueryMessagesRequest identifies one proposal scope and pagination.
+message QueryMessagesRequest {
+  uint64 proposal_id = 1;
+  cosmos.base.query.v1beta1.PageRequest pagination = 2;
+}
+
+// QueryMessagesResponse contains scoped messages and pagination.
+message QueryMessagesResponse {
+  repeated Message messages = 1 [(gogoproto.nullable) = false];
+  cosmos.base.query.v1beta1.PageResponse pagination = 2;
+}
+
+// QueryReactionsRequest identifies one message and pagination.
+message QueryReactionsRequest {
+  uint64 proposal_id = 1;
+  uint64 message_id = 2;
+  cosmos.base.query.v1beta1.PageRequest pagination = 3;
+}
+
+// QueryReactionsResponse contains canonical account reactions and pagination.
+message QueryReactionsResponse {
+  repeated ReactionEntry reactions = 1 [(gogoproto.nullable) = false];
+  cosmos.base.query.v1beta1.PageResponse pagination = 2;
+}
+
+// QuerySessionRequest identifies one session account.
+message QuerySessionRequest {
+  string session_address = 1;
+}
+
+// QuerySessionResponse contains one session authorization.
+message QuerySessionResponse {
+  Session session = 1 [(gogoproto.nullable) = false];
+}

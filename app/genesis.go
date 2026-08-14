@@ -4,16 +4,25 @@ import (
 	"encoding/json"
 	"sort"
 
+	sdkmath "cosmossdk.io/math"
 	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 	precompiletypes "github.com/cosmos/evm/precompiles/types"
 	erc20types "github.com/cosmos/evm/x/erc20/types"
 	feemarkettypes "github.com/cosmos/evm/x/feemarket/types"
 	evmtypes "github.com/cosmos/evm/x/vm/types"
+	"github.com/ethereum/go-ethereum/common"
 	corevm "github.com/ethereum/go-ethereum/core/vm"
 
+	"github.com/cosmos/cosmos-sdk/codec"
+	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
 	minttypes "github.com/cosmos/cosmos-sdk/x/mint/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+
+	discussionprecompile "github.com/Kudora-Labs/kudora/precompiles/discussion"
+	discussionkeeper "github.com/Kudora-Labs/kudora/x/discussion/keeper"
+	discussiontypes "github.com/Kudora-Labs/kudora/x/discussion/types"
 )
 
 const (
@@ -73,7 +82,15 @@ func NewEVMGenesisState() *evmtypes.GenesisState {
 
 func NewFeeMarketGenesisState() *feemarkettypes.GenesisState {
 	feeMarketGenesis := feemarkettypes.DefaultGenesisState()
-	feeMarketGenesis.Params.NoBaseFee = true
+	feeMarketGenesis.Params = feemarkettypes.NewParams(
+		false,
+		8,
+		2,
+		sdkmath.LegacyNewDec(100_000_000),
+		0,
+		sdkmath.LegacyNewDec(100_000_000),
+		sdkmath.LegacyNewDecWithPrec(5, 1),
+	)
 	return feeMarketGenesis
 }
 
@@ -107,15 +124,30 @@ func kudoraBankMetadata() banktypes.Metadata {
 	}
 }
 
-func kudoraStaticPrecompiles() precompiletypes.StaticPrecompiles {
+func kudoraBaseStaticPrecompiles() precompiletypes.StaticPrecompiles {
 	return precompiletypes.NewStaticPrecompiles().
 		WithPraguePrecompiles().
 		WithP256Precompile().
 		WithBech32Precompile()
 }
 
+func kudoraStaticPrecompiles(
+	govKeeper govkeeper.Keeper,
+	bankKeeper bankkeeper.Keeper,
+	cargoCodec codec.Codec,
+	discussionKeeper discussionkeeper.Keeper,
+) precompiletypes.StaticPrecompiles {
+	precompiles := kudoraBaseStaticPrecompiles().
+		WithGovPrecompile(govKeeper, bankKeeper, cargoCodec)
+	discussion := discussionprecompile.NewPrecompile(discussionKeeper, bankKeeper)
+	precompiles[discussion.Address()] = discussion
+	return precompiles
+}
+
 func kudoraActiveStaticPrecompiles() []string {
-	precompiles := kudoraStaticPrecompiles()
+	precompiles := kudoraBaseStaticPrecompiles()
+	precompiles[common.HexToAddress(evmtypes.GovPrecompileAddress)] = nil
+	precompiles[common.HexToAddress(discussiontypes.DiscussionPrecompileAddress)] = nil
 	prague := make(map[string]struct{}, len(corevm.PrecompiledAddressesPrague))
 	for _, addr := range corevm.PrecompiledAddressesPrague {
 		prague[addr.Hex()] = struct{}{}

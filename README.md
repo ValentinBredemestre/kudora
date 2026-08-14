@@ -1,7 +1,7 @@
 # Kudora
 
-Cosmos SDK blockchain with EVM, CosmWasm, and the Kudora `x/integrity`
-business module.
+Cosmos SDK blockchain with EVM, CosmWasm, and the Kudora `x/integrity` and
+`x/discussion` business modules.
 
 Requirements: Docker, Docker Compose, and Make.
 
@@ -13,6 +13,9 @@ make e2e
 
 This starts three validators and validates Cosmos transfers, staking,
 governance, EVM, CosmWasm, integrity ownership, consensus halt, and recovery.
+
+The parent Kudora workspace adds the real frontend and browser business E2E on
+top of this suite. Run `make localnet` or `make e2e` from that workspace root.
 
 ```sh
 make e2e-status

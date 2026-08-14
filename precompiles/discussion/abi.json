@@ -1,0 +1,53 @@
+[
+  {
+    "inputs": [
+      {"internalType": "uint64", "name": "proposalId", "type": "uint64"},
+      {"internalType": "uint64", "name": "parentId", "type": "uint64"},
+      {"internalType": "bytes", "name": "content", "type": "bytes"}
+    ],
+    "name": "post",
+    "outputs": [{"internalType": "uint64", "name": "messageId", "type": "uint64"}],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {"internalType": "uint64", "name": "proposalId", "type": "uint64"},
+      {"internalType": "uint64", "name": "messageId", "type": "uint64"},
+      {"internalType": "uint8", "name": "reaction", "type": "uint8"}
+    ],
+    "name": "react",
+    "outputs": [{"internalType": "bool", "name": "success", "type": "bool"}],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {"internalType": "uint64", "name": "proposalId", "type": "uint64"},
+      {"internalType": "uint64", "name": "messageId", "type": "uint64"},
+      {"internalType": "uint256", "name": "amount", "type": "uint256"}
+    ],
+    "name": "zap",
+    "outputs": [{"internalType": "bool", "name": "success", "type": "bool"}],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {"internalType": "address", "name": "session", "type": "address"},
+      {"internalType": "uint64", "name": "expiresAt", "type": "uint64"},
+      {"internalType": "uint256", "name": "fundAmount", "type": "uint256"}
+    ],
+    "name": "authorizeSession",
+    "outputs": [{"internalType": "bool", "name": "success", "type": "bool"}],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [{"internalType": "address", "name": "session", "type": "address"}],
+    "name": "revokeSession",
+    "outputs": [{"internalType": "bool", "name": "success", "type": "bool"}],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  }
+]

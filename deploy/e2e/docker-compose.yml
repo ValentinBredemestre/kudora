@@ -16,6 +16,9 @@ x-node: &node
 x-tool: &tool
   image: kudora/e2e-runner:local
   user: "0:0"
+  environment:
+    KUDORA_MAX_DEPOSIT_PERIOD: ${KUDORA_MAX_DEPOSIT_PERIOD:-8s}
+    KUDORA_VOTING_PERIOD: ${KUDORA_VOTING_PERIOD:-8s}
   volumes:
     - kudora-e2e-state:/state
   networks:
@@ -26,18 +29,19 @@ x-tool: &tool
 services:
   validator-0:
     <<: *node
-    container_name: kudora-e2e-validator-0
+    container_name: ${KUDORA_E2E_CONTAINER_PREFIX:-kudora-e2e}-validator-0
     command:
       - start
       - --home
       - /state/validator0
       - --minimum-gas-prices
-      - 0akud
+      - ${KUDORA_MINIMUM_GAS_PRICES:-100000000akud}
       - --p2p.laddr
       - tcp://0.0.0.0:26656
       - --rpc.laddr
       - tcp://0.0.0.0:26657
       - --api.enable=true
+      - --api.enabled-unsafe-cors=true
       - --grpc.enable=true
       - --grpc.address
       - 0.0.0.0:9090
@@ -50,21 +54,21 @@ services:
       - --evm.evm-chain-id
       - "120001"
     ports:
-      - "27657:26657"
-      - "27717:1317"
-      - "29090:9090"
-      - "28545:8545"
-      - "28546:8546"
+      - "${KUDORA_RPC_PORT:-27657}:26657"
+      - "${KUDORA_REST_PORT:-27717}:1317"
+      - "${KUDORA_GRPC_PORT:-29090}:9090"
+      - "${KUDORA_EVM_RPC_PORT:-28545}:8545"
+      - "${KUDORA_EVM_WS_PORT:-28546}:8546"
 
   validator-1:
     <<: *node
-    container_name: kudora-e2e-validator-1
+    container_name: ${KUDORA_E2E_CONTAINER_PREFIX:-kudora-e2e}-validator-1
     command:
       - start
       - --home
       - /state/validator1
       - --minimum-gas-prices
-      - 0akud
+      - ${KUDORA_MINIMUM_GAS_PRICES:-100000000akud}
       - --p2p.laddr
       - tcp://0.0.0.0:26656
       - --rpc.laddr
@@ -78,13 +82,13 @@ services:
 
   validator-2:
     <<: *node
-    container_name: kudora-e2e-validator-2
+    container_name: ${KUDORA_E2E_CONTAINER_PREFIX:-kudora-e2e}-validator-2
     command:
       - start
       - --home
       - /state/validator2
       - --minimum-gas-prices
-      - 0akud
+      - ${KUDORA_MINIMUM_GAS_PRICES:-100000000akud}
       - --p2p.laddr
       - tcp://0.0.0.0:26656
       - --rpc.laddr
@@ -118,8 +122,8 @@ services:
 
 volumes:
   kudora-e2e-state:
-    name: kudora-e2e-state
+    name: ${KUDORA_E2E_STATE_VOLUME:-kudora-e2e-state}
 
 networks:
   kudora-e2e:
-    name: kudora-e2e
+    name: ${KUDORA_E2E_NETWORK:-kudora-e2e}

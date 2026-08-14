@@ -16,6 +16,8 @@ import (
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	minttypes "github.com/cosmos/cosmos-sdk/x/mint/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+
+	discussiontypes "github.com/Kudora-Labs/kudora/x/discussion/types"
 )
 
 var moduleAccPerms = map[string][]string{
@@ -58,6 +60,7 @@ func BlockedAddresses() map[string]bool {
 	for _, precompile := range precompiles {
 		blocked[cosmosevmutils.Bech32StringFromHexAddress(precompile)] = true
 	}
+	blocked[cosmosevmutils.Bech32StringFromHexAddress(discussiontypes.DiscussionPrecompileAddress)] = true
 
 	return blocked
 }

@@ -25,7 +25,7 @@ make monitoring-reset
 ## Local URLs
 
 - Prometheus: `http://localhost:19090`
-- Grafana: `http://localhost:3000`
+- Grafana: `http://localhost:3001`
 
 Local-only Grafana credentials:
 

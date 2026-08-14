@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+package kudora.discussion.v1;
+
+option go_package = "github.com/Kudora-Labs/kudora/x/discussion/types";
+
+// Reaction is the single current opinion an account has on a message.
+enum Reaction {
+  // REACTION_UNSPECIFIED removes the current reaction.
+  REACTION_UNSPECIFIED = 0;
+  // REACTION_USEFUL marks a message as useful.
+  REACTION_USEFUL = 1;
+  // REACTION_NOT_USEFUL marks a message as not useful.
+  REACTION_NOT_USEFUL = 2;
+}
+
+// StoredMessage is the compact value stored under message/{proposal_id}/{message_id}.
+message StoredMessage {
+  bytes author = 1;
+  uint64 parent_id = 2;
+  int64 created_at = 3;
+  bytes content = 4;
+}
+
+// Message adds the key fields needed by query clients to a stored message.
+message Message {
+  uint64 proposal_id = 1;
+  uint64 message_id = 2;
+  bytes author = 3;
+  uint64 parent_id = 4;
+  int64 created_at = 5;
+  bytes content = 6;
+}
+
+// ReactionEntry is a query and genesis view of one canonical reaction entry.
+message ReactionEntry {
+  uint64 proposal_id = 1;
+  uint64 message_id = 2;
+  bytes account = 3;
+  Reaction reaction = 4;
+}
+
+// StoredSession is the compact value stored under a session address.
+message StoredSession {
+  bytes owner = 1;
+  int64 expires_at = 2;
+}
+
+// Session adds the session-address key needed by query and genesis clients.
+message Session {
+  bytes session = 1;
+  bytes owner = 2;
+  int64 expires_at = 3;
+}

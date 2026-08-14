@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package kudora.discussion.v1;
+
+import "amino/amino.proto";
+import "gogoproto/gogo.proto";
+import "kudora/discussion/v1/discussion.proto";
+import "kudora/discussion/v1/params.proto";
+
+option go_package = "github.com/Kudora-Labs/kudora/x/discussion/types";
+
+// GenesisState defines all canonical x/discussion state.
+message GenesisState {
+  Params params = 1 [
+    (gogoproto.nullable) = false,
+    (amino.dont_omitempty) = true
+  ];
+  uint64 next_message_id = 2;
+  repeated Message messages = 3 [(gogoproto.nullable) = false];
+  repeated ReactionEntry reactions = 4 [(gogoproto.nullable) = false];
+  repeated Session sessions = 5 [(gogoproto.nullable) = false];
+}

@@ -23,6 +23,8 @@ import (
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
+
+	discussiontypes "github.com/Kudora-Labs/kudora/x/discussion/types"
 )
 
 var (
@@ -71,7 +73,10 @@ func TestDefaultGenesisUsesKudoraDenomMetadata(t *testing.T) {
 
 	var feeMarketGenesis feemarkettypes.GenesisState
 	require.NoError(t, app.AppCodec().UnmarshalJSON(genesis[feemarkettypes.ModuleName], &feeMarketGenesis))
-	require.True(t, feeMarketGenesis.Params.NoBaseFee)
+	require.False(t, feeMarketGenesis.Params.NoBaseFee)
+	require.Equal(t, "100000000.000000000000000000", feeMarketGenesis.Params.BaseFee.String())
+	require.EqualValues(t, 8, feeMarketGenesis.Params.BaseFeeChangeDenominator)
+	require.EqualValues(t, 2, feeMarketGenesis.Params.ElasticityMultiplier)
 
 	var erc20Genesis erc20types.GenesisState
 	require.NoError(t, app.AppCodec().UnmarshalJSON(genesis[erc20types.ModuleName], &erc20Genesis))
@@ -91,15 +96,16 @@ func TestStaticPrecompileSurfaceRemainsNarrow(t *testing.T) {
 	require.Equal(t, []string{
 		evmtypes.P256PrecompileAddress,
 		evmtypes.Bech32PrecompileAddress,
+		evmtypes.GovPrecompileAddress,
+		discussiontypes.DiscussionPrecompileAddress,
 	}, kudoraActiveStaticPrecompiles())
 
-	precompiles := kudoraStaticPrecompiles()
+	precompiles := kudoraBaseStaticPrecompiles()
 	for _, forbidden := range []string{
 		evmtypes.StakingPrecompileAddress,
 		evmtypes.DistributionPrecompileAddress,
 		evmtypes.ICS20PrecompileAddress,
 		evmtypes.BankPrecompileAddress,
-		evmtypes.GovPrecompileAddress,
 		evmtypes.SlashingPrecompileAddress,
 		evmtypes.ICS02PrecompileAddress,
 	} {

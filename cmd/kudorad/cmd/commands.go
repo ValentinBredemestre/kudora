@@ -50,6 +50,8 @@ import (
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
 	"github.com/Kudora-Labs/kudora/app"
+	discussionmodule "github.com/Kudora-Labs/kudora/x/discussion/module"
+	discussiontypes "github.com/Kudora-Labs/kudora/x/discussion/types"
 	integritycli "github.com/Kudora-Labs/kudora/x/integrity/client/cli"
 )
 
@@ -190,6 +192,9 @@ func queryCommand(tempApp *app.App) *cobra.Command {
 	if err := addAutoCLIQueryModule(cmd, stakingtypes.ModuleName, staking.AppModule{}.AutoCLIOptions().Query, builder); err != nil {
 		panic(err)
 	}
+	if err := addAutoCLIQueryModule(cmd, discussiontypes.ModuleName, discussionmodule.AppModule{}.AutoCLIOptions().Query, builder); err != nil {
+		panic(err)
+	}
 
 	cmd.PersistentFlags().String(flags.FlagChainID, "", "The network chain ID")
 	return cmd
@@ -225,6 +230,9 @@ func txCommand(tempApp *app.App) *cobra.Command {
 		panic(err)
 	}
 	if err := addAutoCLITxModule(cmd, stakingtypes.ModuleName, staking.AppModule{}.AutoCLIOptions().Tx, builder); err != nil {
+		panic(err)
+	}
+	if err := addAutoCLITxModule(cmd, discussiontypes.ModuleName, discussionmodule.AppModule{}.AutoCLIOptions().Tx, builder); err != nil {
 		panic(err)
 	}
 

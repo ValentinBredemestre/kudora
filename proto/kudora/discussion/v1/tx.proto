@@ -1,0 +1,104 @@
+syntax = "proto3";
+
+package kudora.discussion.v1;
+
+import "amino/amino.proto";
+import "cosmos/msg/v1/msg.proto";
+import "cosmos_proto/cosmos.proto";
+import "gogoproto/gogo.proto";
+import "kudora/discussion/v1/discussion.proto";
+import "kudora/discussion/v1/params.proto";
+
+option go_package = "github.com/Kudora-Labs/kudora/x/discussion/types";
+
+// Msg defines the native Cosmos write API for discussions.
+service Msg {
+  option (cosmos.msg.v1.service) = true;
+
+  // UpdateParams changes the post fee through x/gov authority.
+  rpc UpdateParams(MsgUpdateParams) returns (MsgUpdateParamsResponse);
+  // Post creates a root message or reply.
+  rpc Post(MsgPost) returns (MsgPostResponse);
+  // React creates, changes, or removes one account reaction.
+  rpc React(MsgReact) returns (MsgReactResponse);
+  // Zap transfers native KUD to a message author.
+  rpc Zap(MsgZap) returns (MsgZapResponse);
+  // AuthorizeSession authorizes and funds one limited EVM session account.
+  rpc AuthorizeSession(MsgAuthorizeSession) returns (MsgAuthorizeSessionResponse);
+  // RevokeSession removes an owner's active session authorization.
+  rpc RevokeSession(MsgRevokeSession) returns (MsgRevokeSessionResponse);
+}
+
+// MsgUpdateParams is the governance-authorized parameter update.
+message MsgUpdateParams {
+  option (cosmos.msg.v1.signer) = "authority";
+  option (amino.name) = "kudora/x/discussion/MsgUpdateParams";
+  string authority = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+  Params params = 2 [
+    (gogoproto.nullable) = false,
+    (amino.dont_omitempty) = true
+  ];
+}
+
+// MsgUpdateParamsResponse is empty on success.
+message MsgUpdateParamsResponse {}
+
+// MsgPost creates one canonical discussion message.
+message MsgPost {
+  option (cosmos.msg.v1.signer) = "creator";
+  string creator = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+  uint64 proposal_id = 2;
+  uint64 parent_id = 3;
+  bytes content = 4;
+}
+
+// MsgPostResponse returns the chain-assigned monotonic ID.
+message MsgPostResponse {
+  uint64 message_id = 1;
+}
+
+// MsgReact sets a reaction, or removes it with REACTION_UNSPECIFIED.
+message MsgReact {
+  option (cosmos.msg.v1.signer) = "creator";
+  string creator = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+  uint64 proposal_id = 2;
+  uint64 message_id = 3;
+  Reaction reaction = 4;
+}
+
+// MsgReactResponse is empty on success.
+message MsgReactResponse {}
+
+// MsgZap transfers an amount of native akud to a message author.
+message MsgZap {
+  option (cosmos.msg.v1.signer) = "creator";
+  string creator = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+  uint64 proposal_id = 2;
+  uint64 message_id = 3;
+  string amount = 4 [(cosmos_proto.scalar) = "cosmos.Int"];
+}
+
+// MsgZapResponse is empty on success.
+message MsgZapResponse {}
+
+// MsgAuthorizeSession authorizes one limited EVM session and optionally funds it.
+message MsgAuthorizeSession {
+  option (cosmos.msg.v1.signer) = "creator";
+  string creator = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+  string session_address = 2;
+  int64 expires_at = 3;
+  string fund_amount = 4 [(cosmos_proto.scalar) = "cosmos.Int"];
+}
+
+// MsgAuthorizeSessionResponse is empty on success.
+message MsgAuthorizeSessionResponse {}
+
+// MsgRevokeSession revokes one session owned by the signer.
+message MsgRevokeSession {
+  option (cosmos.msg.v1.signer) = "creator";
+  string creator = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+  string session_address = 2;
+}
+
+// MsgRevokeSessionResponse is empty on success.
+message MsgRevokeSessionResponse {}

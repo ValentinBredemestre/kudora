@@ -29,8 +29,8 @@ fail() {
 [[ -f "${METADATA}" ]] || fail "metadata is missing; run make e2e-init"
 mkdir -p "${RESULT_DIR}" "${LOG_DIR}"
 
-alice_address="$(jq -r '.users.alice.address' "${METADATA}")"
-bob_address="$(jq -r '.users.bob.address' "${METADATA}")"
+alice_address="$(jq -r '.users.alice.cosmos_address' "${METADATA}")"
+bob_address="$(jq -r '.users.bob.cosmos_address' "${METADATA}")"
 alice_home="$(jq -r '.users.alice.home' "${METADATA}")"
 validator0_operator="$(jq -r '.validators[0].operator' "${METADATA}")"
 
@@ -156,14 +156,14 @@ log "PASS network: three bonded validators are queryable"
 
 log "Scenario 1/6: native Cosmos transfer"
 query_json "${LOG_DIR}/bob-balance-before.json" kudorad query bank balance "${bob_address}" "${DENOM}" --node "${NODE}"
-jq -e '.balance.amount == "100000000000000000000"' "${LOG_DIR}/bob-balance-before.json" >/dev/null \
+jq -e '.balance.amount == "500000000000000000000"' "${LOG_DIR}/bob-balance-before.json" >/dev/null \
   || fail "Bob's initial balance is unexpected"
 expect_tx_success cosmos-transfer \
   kudorad tx bank send alice "${bob_address}" "1000000000000000000${DENOM}" \
   "${alice_tx[@]}" --gas 300000
 cosmos_transfer_hash="${LAST_TX_HASH}"
 query_json "${LOG_DIR}/bob-balance-after.json" kudorad query bank balance "${bob_address}" "${DENOM}" --node "${NODE}"
-jq -e '.balance.amount == "101000000000000000000"' "${LOG_DIR}/bob-balance-after.json" >/dev/null \
+jq -e '.balance.amount == "501000000000000000000"' "${LOG_DIR}/bob-balance-after.json" >/dev/null \
   || fail "Bob did not receive the native transfer"
 
 log "Scenario 2/6: staking delegation"

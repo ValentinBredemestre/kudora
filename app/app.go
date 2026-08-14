@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -116,6 +117,9 @@ import (
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
 	corevm "github.com/ethereum/go-ethereum/core/vm"
 
+	discussionkeeper "github.com/Kudora-Labs/kudora/x/discussion/keeper"
+	discussionmodule "github.com/Kudora-Labs/kudora/x/discussion/module"
+	discussiontypes "github.com/Kudora-Labs/kudora/x/discussion/types"
 	integritykeeper "github.com/Kudora-Labs/kudora/x/integrity/keeper"
 	integritymodule "github.com/Kudora-Labs/kudora/x/integrity/module"
 	integritytypes "github.com/Kudora-Labs/kudora/x/integrity/types"
@@ -163,12 +167,13 @@ type App struct {
 
 	IBCKeeper *ibckeeper.Keeper
 
-	FeeMarketKeeper feemarketkeeper.Keeper
-	EVMKeeper       *evmkeeper.Keeper
-	Erc20Keeper     erc20keeper.Keeper
-	WasmKeeper      wasmkeeper.Keeper
-	IntegrityKeeper integritykeeper.Keeper
-	EVMMempool      sdkmempool.ExtMempool
+	FeeMarketKeeper  feemarketkeeper.Keeper
+	EVMKeeper        *evmkeeper.Keeper
+	Erc20Keeper      erc20keeper.Keeper
+	WasmKeeper       wasmkeeper.Keeper
+	DiscussionKeeper discussionkeeper.Keeper
+	IntegrityKeeper  integritykeeper.Keeper
+	EVMMempool       sdkmempool.ExtMempool
 
 	ModuleManager      *module.Manager
 	BasicModuleManager module.BasicManager
@@ -233,6 +238,7 @@ func New(
 		feemarkettypes.StoreKey,
 		erc20types.StoreKey,
 		wasmtypes.StoreKey,
+		discussiontypes.StoreKey,
 		integritytypes.StoreKey,
 	)
 	oKeys := storetypes.NewObjectStoreKeys(banktypes.ObjectStoreKey, evmtypes.ObjectKey)
@@ -383,6 +389,7 @@ func New(
 	}
 
 	govConfig := govtypes.DefaultConfig()
+	govConfig.MaxMetadataLen = 8 * 1024
 	govKeeper := govkeeper.NewKeeper(
 		appCodec,
 		runtime.NewKVStoreService(keys[govtypes.StoreKey]),
@@ -395,6 +402,17 @@ func New(
 		govkeeper.NewDefaultCalculateVoteResultsAndVotingPower(app.StakingKeeper),
 	)
 	app.GovKeeper = *govKeeper.SetHooks(govtypes.NewMultiGovHooks())
+
+	app.DiscussionKeeper = discussionkeeper.NewKeeper(
+		runtime.NewKVStoreService(keys[discussiontypes.StoreKey]),
+		appCodec,
+		app.AccountKeeper.AddressCodec(),
+		authtypes.NewModuleAddress(govtypes.ModuleName),
+		app.BankKeeper,
+		func(ctx context.Context, proposalID uint64) (bool, error) {
+			return app.GovKeeper.Proposals.Has(ctx, proposalID)
+		},
+	)
 
 	evidenceKeeper := evidencekeeper.NewKeeper(
 		appCodec,
@@ -427,7 +445,12 @@ func New(
 		&app.Erc20Keeper,
 		evmChainID,
 		tracer,
-	).WithStaticPrecompiles(map[common.Address]corevm.PrecompiledContract(kudoraStaticPrecompiles()))
+	).WithStaticPrecompiles(map[common.Address]corevm.PrecompiledContract(kudoraStaticPrecompiles(
+		app.GovKeeper,
+		app.BankKeeper,
+		appCodec,
+		app.DiscussionKeeper,
+	)))
 
 	app.EVMKeeper.EnableVirtualFeeCollection()
 
@@ -477,6 +500,7 @@ func New(
 		genutil.NewAppModule(app.AccountKeeper, app.StakingKeeper, app, app.txConfig),
 		auth.NewAppModule(appCodec, app.AccountKeeper, authsims.RandomGenesisAccounts, nil),
 		bank.NewAppModule(appCodec, app.BankKeeper, app.AccountKeeper, nil),
+		discussionmodule.NewAppModule(appCodec, app.DiscussionKeeper),
 		integritymodule.NewAppModule(appCodec, app.IntegrityKeeper, app.AccountKeeper, app.BankKeeper),
 		feegrantmodule.NewAppModule(appCodec, app.AccountKeeper, app.BankKeeper, app.FeeGrantKeeper, app.interfaceRegistry),
 		gov.NewAppModule(appCodec, &app.GovKeeper, app.AccountKeeper, app.BankKeeper, nil),
@@ -523,6 +547,7 @@ func New(
 		stakingtypes.ModuleName,
 		authtypes.ModuleName,
 		banktypes.ModuleName,
+		discussiontypes.ModuleName,
 		integritytypes.ModuleName,
 		govtypes.ModuleName,
 		genutiltypes.ModuleName,
@@ -538,6 +563,7 @@ func New(
 		govtypes.ModuleName,
 		stakingtypes.ModuleName,
 		authtypes.ModuleName,
+		discussiontypes.ModuleName,
 		integritytypes.ModuleName,
 		evmtypes.ModuleName,
 		erc20types.ModuleName,
@@ -558,6 +584,7 @@ func New(
 	genesisModuleOrder := []string{
 		authtypes.ModuleName,
 		banktypes.ModuleName,
+		discussiontypes.ModuleName,
 		integritytypes.ModuleName,
 		distrtypes.ModuleName,
 		stakingtypes.ModuleName,

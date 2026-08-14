@@ -94,6 +94,10 @@ func main() {
 		err = runTransferSmoke(os.Args[2:])
 	case "contract-smoke":
 		err = runContractSmoke(os.Args[2:])
+	case "swap-deploy":
+		err = runSwapDeploy(os.Args[2:])
+	case "swap-smoke":
+		err = runSwapSmoke(os.Args[2:])
 	default:
 		err = fmt.Errorf("unknown command %q", os.Args[1])
 	}
@@ -107,6 +111,7 @@ func runCreateAccount(args []string) error {
 	fs := flag.NewFlagSet("create-account", flag.ContinueOnError)
 	keyFile := fs.String("key-file", "", "path to write the test-only private key")
 	infoFile := fs.String("info-file", "", "path to write the public account metadata")
+	privateKey := fs.String("private-key", "", "optional deterministic test-only hex private key")
 
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -116,9 +121,15 @@ func runCreateAccount(args []string) error {
 		return errors.New("create-account: --key-file and --info-file are required")
 	}
 
-	key, err := crypto.GenerateKey()
+	var key *ecdsa.PrivateKey
+	var err error
+	if *privateKey == "" {
+		key, err = crypto.GenerateKey()
+	} else {
+		key, err = crypto.HexToECDSA(strings.TrimPrefix(*privateKey, "0x"))
+	}
 	if err != nil {
-		return fmt.Errorf("create-account: generate key: %w", err)
+		return fmt.Errorf("create-account: load key: %w", err)
 	}
 
 	info := accountInfo{

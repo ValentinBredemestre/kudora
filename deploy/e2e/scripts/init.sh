@@ -6,9 +6,10 @@ STATE_DIR="${KUDORA_E2E_STATE_DIR:-/state}"
 CHAIN_ID="${KUDORA_CHAIN_ID:-kudora_12000-1}"
 DENOM="${KUDORA_DENOM:-akud}"
 VALIDATOR_FUNDS="1000000000000000000000${DENOM}"
-ALICE_FUNDS="100000000000000000000${DENOM}"
-BOB_FUNDS="100000000000000000000${DENOM}"
-EVM_FUNDS="500000000000000000000${DENOM}"
+LOCAL_ACCOUNT_FUNDS="500000000000000000000${DENOM}"
+ALICE_PRIVATE_KEY="ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+BOB_PRIVATE_KEY="59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"
+CAROL_PRIVATE_KEY="5de4111afa1c3b3acad9b40e0cb199eb39ccbd86caeea1eb07bdf2c834bbdca9"
 VALIDATOR_STAKES=(
   "400000000000000000000${DENOM}"
   "300000000000000000000${DENOM}"
@@ -66,35 +67,36 @@ for index in 0 1 2; do
   [[ -n "${validator_operators[${index}]}" ]] || fail "validator ${index} operator address is missing"
 done
 
-alice_json="$(kudorad keys add alice \
-  --keyring-backend test \
-  --keyring-dir "${STATE_DIR}/validator0" \
-  --home "${STATE_DIR}/validator0" \
-  --output json \
-  2>"${STATE_DIR}/logs/key-alice.stderr")"
-alice_address="$(jq -r '.address // empty' <<<"${alice_json}")"
-unset alice_json
+for account in alice bob carol; do
+  case "${account}" in
+    alice) private_key="${ALICE_PRIVATE_KEY}" ;;
+    bob) private_key="${BOB_PRIVATE_KEY}" ;;
+    carol) private_key="${CAROL_PRIVATE_KEY}" ;;
+  esac
+  kudora-evm-smoke-helper create-account \
+    --private-key "${private_key}" \
+    --key-file "${STATE_DIR}/${account}.key" \
+    --info-file "${STATE_DIR}/${account}.json" \
+    >"${STATE_DIR}/logs/${account}-account.stdout" \
+    2>"${STATE_DIR}/logs/${account}-account.stderr"
+  printf 'localnet\n' | kudorad keys unsafe-import-eth-key "${account}" "${private_key}" \
+    --keyring-backend test \
+    --keyring-dir "${STATE_DIR}/validator0" \
+    --home "${STATE_DIR}/validator0" \
+    >"${STATE_DIR}/logs/key-${account}.stdout" \
+    2>"${STATE_DIR}/logs/key-${account}.stderr"
+done
 
-bob_json="$(kudorad keys add bob \
-  --keyring-backend test \
-  --keyring-dir "${STATE_DIR}/validator0" \
-  --home "${STATE_DIR}/validator0" \
-  --output json \
-  2>"${STATE_DIR}/logs/key-bob.stderr")"
-bob_address="$(jq -r '.address // empty' <<<"${bob_json}")"
-unset bob_json
+alice_address="$(jq -r '.cosmos_address // empty' "${STATE_DIR}/alice.json")"
+bob_address="$(jq -r '.cosmos_address // empty' "${STATE_DIR}/bob.json")"
+carol_address="$(jq -r '.cosmos_address // empty' "${STATE_DIR}/carol.json")"
+alice_eth_address="$(jq -r '.eth_address // empty' "${STATE_DIR}/alice.json")"
+bob_eth_address="$(jq -r '.eth_address // empty' "${STATE_DIR}/bob.json")"
+carol_eth_address="$(jq -r '.eth_address // empty' "${STATE_DIR}/carol.json")"
+[[ -n "${alice_address}" && -n "${bob_address}" && -n "${carol_address}" ]] || fail "local account address is missing"
 
-[[ -n "${alice_address}" ]] || fail "Alice address is missing"
-[[ -n "${bob_address}" ]] || fail "Bob address is missing"
-
-kudora-evm-smoke-helper create-account \
-  --key-file "${STATE_DIR}/evm-sender.key" \
-  --info-file "${STATE_DIR}/evm-sender.json" \
-  >"${STATE_DIR}/logs/evm-sender.stdout" \
-  2>"${STATE_DIR}/logs/evm-sender.stderr"
-evm_cosmos_address="$(jq -r '.cosmos_address // empty' "${STATE_DIR}/evm-sender.json")"
-evm_eth_address="$(jq -r '.eth_address // empty' "${STATE_DIR}/evm-sender.json")"
-[[ -n "${evm_cosmos_address}" && -n "${evm_eth_address}" ]] || fail "EVM sender address is missing"
+cp "${STATE_DIR}/alice.key" "${STATE_DIR}/evm-sender.key"
+cp "${STATE_DIR}/alice.json" "${STATE_DIR}/evm-sender.json"
 
 canonical_home="${STATE_DIR}/validator0"
 for index in 0 1 2; do
@@ -106,15 +108,15 @@ for index in 0 1 2; do
     2>"${STATE_DIR}/logs/fund-validator-${index}.stderr"
 done
 
-kudorad genesis add-genesis-account "${alice_address}" "${ALICE_FUNDS}" \
+kudorad genesis add-genesis-account "${alice_address}" "${LOCAL_ACCOUNT_FUNDS}" \
   --home "${canonical_home}" \
   >"${STATE_DIR}/logs/fund-alice.stdout" 2>"${STATE_DIR}/logs/fund-alice.stderr"
-kudorad genesis add-genesis-account "${bob_address}" "${BOB_FUNDS}" \
+kudorad genesis add-genesis-account "${bob_address}" "${LOCAL_ACCOUNT_FUNDS}" \
   --home "${canonical_home}" \
   >"${STATE_DIR}/logs/fund-bob.stdout" 2>"${STATE_DIR}/logs/fund-bob.stderr"
-kudorad genesis add-genesis-account "${evm_cosmos_address}" "${EVM_FUNDS}" \
+kudorad genesis add-genesis-account "${carol_address}" "${LOCAL_ACCOUNT_FUNDS}" \
   --home "${canonical_home}" \
-  >"${STATE_DIR}/logs/fund-evm.stdout" 2>"${STATE_DIR}/logs/fund-evm.stderr"
+  >"${STATE_DIR}/logs/fund-carol.stdout" 2>"${STATE_DIR}/logs/fund-carol.stderr"
 
 for index in 1 2; do
   cp "${canonical_home}/config/genesis.json" "${STATE_DIR}/validator${index}/config/genesis.json"
@@ -127,6 +129,7 @@ for index in 0 1 2; do
     --home "${home}" \
     --keyring-backend test \
     --keyring-dir "${home}" \
+    --fees "50000000000000${DENOM}" \
     >"${STATE_DIR}/logs/gentx-validator-${index}.stdout" \
     2>"${STATE_DIR}/logs/gentx-validator-${index}.stderr"
 done
@@ -143,12 +146,14 @@ genesis="${canonical_home}/config/genesis.json"
 jq \
   --arg denom "${DENOM}" \
   --arg alice "${alice_address}" \
+  --arg max_deposit_period "${KUDORA_MAX_DEPOSIT_PERIOD:-8s}" \
+  --arg voting_period "${KUDORA_VOTING_PERIOD:-8s}" \
   '
     .app_state.gov.params.min_deposit = [{denom: $denom, amount: "1000000000000000000"}]
     | .app_state.gov.params.expedited_min_deposit = [{denom: $denom, amount: "2000000000000000000"}]
     | .app_state.gov.params.expedited_voting_period = "5s"
-    | .app_state.gov.params.max_deposit_period = "8s"
-    | .app_state.gov.params.voting_period = "8s"
+    | .app_state.gov.params.max_deposit_period = $max_deposit_period
+    | .app_state.gov.params.voting_period = $voting_period
     | .app_state.gov.params.quorum = "0.334000000000000000"
     | .app_state.gov.params.threshold = "0.500000000000000000"
     | .app_state.gov.params.veto_threshold = "0.334000000000000000"
@@ -209,8 +214,10 @@ jq -n \
   --arg denom "${DENOM}" \
   --arg alice "${alice_address}" \
   --arg bob "${bob_address}" \
-  --arg evm_cosmos "${evm_cosmos_address}" \
-  --arg evm_eth "${evm_eth_address}" \
+  --arg carol "${carol_address}" \
+  --arg alice_eth "${alice_eth_address}" \
+  --arg bob_eth "${bob_eth_address}" \
+  --arg carol_eth "${carol_eth_address}" \
   --arg validator0_account "${validator_accounts[0]}" \
   --arg validator1_account "${validator_accounts[1]}" \
   --arg validator2_account "${validator_accounts[2]}" \
@@ -221,9 +228,10 @@ jq -n \
     chain_id: $chain_id,
     denom: $denom,
     users: {
-      alice: {key: "alice", address: $alice, home: "/state/validator0"},
-      bob: {key: "bob", address: $bob, home: "/state/validator0"},
-      evm_sender: {cosmos_address: $evm_cosmos, eth_address: $evm_eth, key_file: "/state/evm-sender.key"}
+      alice: {key: "alice", cosmos_address: $alice, eth_address: $alice_eth, key_file: "/state/alice.key", home: "/state/validator0"},
+      bob: {key: "bob", cosmos_address: $bob, eth_address: $bob_eth, key_file: "/state/bob.key", home: "/state/validator0"},
+      carol: {key: "carol", cosmos_address: $carol, eth_address: $carol_eth, key_file: "/state/carol.key", home: "/state/validator0"},
+      evm_sender: {cosmos_address: $alice, eth_address: $alice_eth, key_file: "/state/evm-sender.key"}
     },
     validators: [
       {index: 0, key: "validator0", account: $validator0_account, operator: $validator0_operator, home: "/state/validator0", power_percent: 40},

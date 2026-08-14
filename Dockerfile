@@ -25,6 +25,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 # Copy only the source trees required by the binaries.
 COPY app/ app/
 COPY cmd/ cmd/
+COPY precompiles/ precompiles/
 COPY x/ x/
 COPY testutil/evm-smoke/ testutil/evm-smoke/
 

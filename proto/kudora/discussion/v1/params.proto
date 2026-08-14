@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package kudora.discussion.v1;
+
+import "amino/amino.proto";
+import "cosmos/base/v1beta1/coin.proto";
+import "gogoproto/gogo.proto";
+
+option go_package = "github.com/Kudora-Labs/kudora/x/discussion/types";
+
+// Params defines the one current economic parameter of x/discussion.
+message Params {
+  option (amino.name) = "kudora/x/discussion/Params";
+  option (gogoproto.equal) = true;
+
+  cosmos.base.v1beta1.Coin post_fee = 1 [
+    (gogoproto.nullable) = false,
+    (amino.dont_omitempty) = true
+  ];
+}

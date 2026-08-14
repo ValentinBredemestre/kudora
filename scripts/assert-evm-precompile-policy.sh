@@ -31,13 +31,15 @@ trap 'rm -rf "$TMP_HOME"' EXIT
 
 expected_active='[
   "0x0000000000000000000000000000000000000100",
-  "0x0000000000000000000000000000000000000400"
+  "0x0000000000000000000000000000000000000400",
+  "0x0000000000000000000000000000000000000805",
+  "0x0000000000000000000000000000000000000900"
 ]'
 
 jq -e --argjson expected "$expected_active" '
   (.app_state.evm.params.active_static_precompiles // []) == $expected
 ' "$GENESIS_PATH" >/dev/null || {
-  echo "assert-evm-precompile-policy: active static precompile list drifted from the approved p256/bech32-only set" >&2
+  echo "assert-evm-precompile-policy: active static precompile list drifted from the approved p256/bech32/gov/discussion set" >&2
   exit 1
 }
 
@@ -56,7 +58,6 @@ jq -e '
     "0x0000000000000000000000000000000000000801",
     "0x0000000000000000000000000000000000000802",
     "0x0000000000000000000000000000000000000804",
-    "0x0000000000000000000000000000000000000805",
     "0x0000000000000000000000000000000000000806",
     "0x0000000000000000000000000000000000000807"
   ] as $forbidden
