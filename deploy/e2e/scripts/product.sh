@@ -55,11 +55,14 @@ case "${MODE}" in
       echo "  Private key: $(tr -d '\n' <"${STATE_DIR}/${account}.key")"
       echo
     done
-    echo "Validators"
     for index in 0 1 2; do
-      echo "  Kudora Validator $((index + 1)): $(jq -r ".validators[${index}].operator" "${STATE_DIR}/metadata.json")"
+      echo "Kudora Validator $((index + 1))"
+      echo "  EVM:         $(jq -r ".validators[${index}].eth_address" "${STATE_DIR}/metadata.json")"
+      echo "  Cosmos:      $(jq -r ".validators[${index}].account" "${STATE_DIR}/metadata.json")"
+      echo "  Validator:   $(jq -r ".validators[${index}].operator" "${STATE_DIR}/metadata.json")"
+      echo "  Private key: $(tr -d '\n' <"${STATE_DIR}/validator${index}.key")"
+      echo
     done
-    echo
     ;;
   height)
     wait_ready
@@ -101,6 +104,7 @@ case "${MODE}" in
       },
       validators: [.validators[] | {
         name: ("Kudora Validator " + ((.index + 1) | tostring)),
+        evmAddress: .eth_address,
         accountAddress: .account,
         operatorAddress: .operator,
         powerPercent: .power_percent
@@ -118,10 +122,17 @@ case "${MODE}" in
       --arg alice "$(tr -d '\n' <"${STATE_DIR}/alice.key")" \
       --arg bob "$(tr -d '\n' <"${STATE_DIR}/bob.key")" \
       --arg carol "$(tr -d '\n' <"${STATE_DIR}/carol.key")" \
+      --arg validator0 "$(tr -d '\n' <"${STATE_DIR}/validator0.key")" \
+      --arg validator1 "$(tr -d '\n' <"${STATE_DIR}/validator1.key")" \
+      --arg validator2 "$(tr -d '\n' <"${STATE_DIR}/validator2.key")" \
       '{localDevelopmentOnly: true, accounts: {
         alice: {privateKey: ("0x" + $alice)},
         bob: {privateKey: ("0x" + $bob)},
         carol: {privateKey: ("0x" + $carol)}
+      }, validators: {
+        validator0: {privateKey: ("0x" + $validator0)},
+        validator1: {privateKey: ("0x" + $validator1)},
+        validator2: {privateKey: ("0x" + $validator2)}
       }}'
     ;;
   *)

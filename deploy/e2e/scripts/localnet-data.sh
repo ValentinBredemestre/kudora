@@ -131,12 +131,14 @@ bob_address="$(jq -r '.users.bob.cosmos_address' "${METADATA}")"
 carol_address="$(jq -r '.users.carol.cosmos_address' "${METADATA}")"
 
 post_message() {
-  local label="$1" proposal_id="$2" parent_id="$3" author="$4" payload="$5"
+  local label="$1" proposal_id="$2" parent_id="$3" author="$4" payload="$5" home="${6:-${account_home}}" capture_id="${7:-yes}"
   local encoded
   encoded="$(printf '%s' "${payload}" | base64 -w 0)"
-  tx_for "${label}" "${author}" "${account_home}" \
+  tx_for "${label}" "${author}" "${home}" \
     kudorad tx discussion post "${proposal_id}" "${parent_id}" "${encoded}" --gas 350000
-  LAST_MESSAGE_ID="$(curl -sf "${REST}/kudora/discussion/v1/messages/${proposal_id}?pagination.limit=200" | jq -r '[.messages[].message_id | tonumber] | max // 0')"
+  if [[ "${capture_id}" == "yes" ]]; then
+    LAST_MESSAGE_ID="$(curl -sf "${REST}/kudora/discussion/v1/messages/${proposal_id}?pagination.limit=200" | jq -r '[.messages[].message_id | tonumber] | max // 0')"
+  fi
 }
 
 seed_demo() {
@@ -207,15 +209,17 @@ seed_demo() {
   local proposal_ids=() proposal_groups=()
   local proposal_file="${RESULT_DIR}/demo-proposal.json"
 
-  local validator0_key validator0_home validator1_key validator1_home
+  local validator0_key validator0_home validator1_key validator1_home validator2_key validator2_home
   validator0_key="$(jq -r '.validators[0].key' "${METADATA}")"
   validator0_home="$(jq -r '.validators[0].home' "${METADATA}")"
   validator1_key="$(jq -r '.validators[1].key' "${METADATA}")"
   validator1_home="$(jq -r '.validators[1].home' "${METADATA}")"
+  validator2_key="$(jq -r '.validators[2].key' "${METADATA}")"
+  validator2_home="$(jq -r '.validators[2].home' "${METADATA}")"
 
   log "creating 12 completed governance proposals"
   for index in $(seq 36 47); do
-    local title="${titles[${index}]}" summary metadata proposal_id vote
+    local title="${titles[${index}]}" summary metadata proposal_id
     summary="A public decision with measurable outcomes, clear ownership and community checkpoints."
     metadata="$(jq -nc --arg title "${title}" --arg summary "${summary}" '{title:$title,summary:$summary,v:1,group:"most-discussed",context:"The community needs a transparent decision backed by public evidence.",changes:["Publish the decision, owner and milestones on-chain.","Review progress with the community."],outcome:"Anyone can verify the result and follow delivery."}')"
     jq -n \
@@ -230,19 +234,30 @@ seed_demo() {
     proposal_id="$(curl -sf "${REST}/cosmos/gov/v1/proposals?pagination.limit=1&pagination.reverse=true" | jq -r '.proposals[0].id')"
     proposal_ids[${index}]="${proposal_id}"
     proposal_groups[${index}]="most-discussed"
-    if (( index % 2 == 0 )); then vote="yes"; else vote="no"; fi
-    tx_for "proposal-${index}-vote-0" "${validator0_key}" "${validator0_home}" \
-      kudorad tx gov vote "${proposal_id}" "${vote}" --gas 300000
-    tx_for "proposal-${index}-vote-1" "${validator1_key}" "${validator1_home}" \
-      kudorad tx gov vote "${proposal_id}" "${vote}" --gas 300000
+    local -a vote_pids=()
+    if (( index % 2 == 0 )); then
+      tx_for "proposal-${index}-vote-0" "${validator0_key}" "${validator0_home}" kudorad tx gov vote "${proposal_id}" yes --gas 300000 & vote_pids+=("$!")
+      tx_for "proposal-${index}-vote-1" "${validator1_key}" "${validator1_home}" kudorad tx gov vote "${proposal_id}" yes --gas 300000 & vote_pids+=("$!")
+      tx_for "proposal-${index}-vote-2" "${validator2_key}" "${validator2_home}" kudorad tx gov vote "${proposal_id}" no --gas 300000 & vote_pids+=("$!")
+    else
+      tx_for "proposal-${index}-vote-0" "${validator0_key}" "${validator0_home}" kudorad tx gov vote "${proposal_id}" yes --gas 300000 & vote_pids+=("$!")
+      tx_for "proposal-${index}-vote-1" "${validator1_key}" "${validator1_home}" kudorad tx gov vote "${proposal_id}" abstain --gas 300000 & vote_pids+=("$!")
+      tx_for "proposal-${index}-vote-2" "${validator2_key}" "${validator2_home}" kudorad tx gov vote "${proposal_id}" yes --gas 300000 & vote_pids+=("$!")
+    fi
+    for pid in "${vote_pids[@]}"; do wait "${pid}"; done
   done
 
   log "creating 36 open governance proposals"
   for index in $(seq 0 35); do
-    local title="${titles[${index}]}" group summary metadata proposal_id
+    local title="${titles[${index}]}" group summary metadata proposal_id demo_hours
     if (( index < 12 )); then group="active"; elif (( index < 24 )); then group="representatives"; else group="closing"; fi
+    case $((index % 12)) in
+      0) demo_hours=3 ;; 1) demo_hours=6 ;; 2) demo_hours=9 ;; 3) demo_hours=12 ;;
+      4) demo_hours=18 ;; 5) demo_hours=23 ;; 6) demo_hours=30 ;; 7) demo_hours=36 ;;
+      8) demo_hours=48 ;; 9) demo_hours=60 ;; 10) demo_hours=72 ;; 11) demo_hours=96 ;;
+    esac
     summary="A focused proposal written in plain language with a public delivery checkpoint."
-    metadata="$(jq -nc --arg title "${title}" --arg summary "${summary}" --arg group "${group}" '{title:$title,summary:$summary,v:1,group:$group,context:"This proposal turns a community need into one verifiable decision.",changes:["Record the commitment and responsible owner on-chain.","Publish a progress checkpoint for everyone."],outcome:"The community can inspect both the decision and its follow-up."}')"
+    metadata="$(jq -nc --arg title "${title}" --arg summary "${summary}" --arg group "${group}" --argjson demoHours "${demo_hours}" '{title:$title,summary:$summary,v:1,group:$group,demoHours:$demoHours,context:"This proposal turns a community need into one verifiable decision.",changes:["Record the commitment and responsible owner on-chain.","Publish a progress checkpoint for everyone."],outcome:"The community can inspect both the decision and its follow-up."}')"
     jq -n \
       --arg authority "${gov_authority}" \
       --arg metadata "${metadata}" \
@@ -255,15 +270,33 @@ seed_demo() {
     proposal_id="$(curl -sf "${REST}/cosmos/gov/v1/proposals?pagination.limit=1&pagination.reverse=true" | jq -r '.proposals[0].id')"
     proposal_ids[${index}]="${proposal_id}"
     proposal_groups[${index}]="${group}"
-    if [[ "${group}" == "active" ]]; then
-      local choice="yes"
-      case $((index % 4)) in 1) choice="no" ;; 2) choice="abstain" ;; 3) choice="no_with_veto" ;; esac
-      tx_for "proposal-${index}-alice-vote" alice "${account_home}" \
-        kudorad tx gov vote "${proposal_id}" "${choice}" --gas 300000
-    elif [[ "${group}" == "representatives" ]]; then
-      tx_for "proposal-${index}-representative-vote" "${validator0_key}" "${validator0_home}" \
-        kudorad tx gov vote "${proposal_id}" yes --gas 300000
-    fi
+    local -a vote_pids=()
+    case "${index}" in
+      0) tx_for "proposal-${index}-alice-vote" alice "${account_home}" kudorad tx gov vote "${proposal_id}" yes --gas 300000 & vote_pids+=("$!") ;;
+      1) tx_for "proposal-${index}-alice-vote" alice "${account_home}" kudorad tx gov vote "${proposal_id}" no --gas 300000 & vote_pids+=("$!") ;;
+      2) tx_for "proposal-${index}-bob-vote" bob "${account_home}" kudorad tx gov vote "${proposal_id}" abstain --gas 300000 & vote_pids+=("$!") ;;
+      3) tx_for "proposal-${index}-carol-vote" carol "${account_home}" kudorad tx gov vote "${proposal_id}" no_with_veto --gas 300000 & vote_pids+=("$!") ;;
+    esac
+    case $((index % 4)) in
+      0)
+        tx_for "proposal-${index}-vote-0" "${validator0_key}" "${validator0_home}" kudorad tx gov vote "${proposal_id}" yes --gas 300000 & vote_pids+=("$!")
+        tx_for "proposal-${index}-vote-1" "${validator1_key}" "${validator1_home}" kudorad tx gov vote "${proposal_id}" no --gas 300000 & vote_pids+=("$!")
+        tx_for "proposal-${index}-vote-2" "${validator2_key}" "${validator2_home}" kudorad tx gov vote "${proposal_id}" abstain --gas 300000 & vote_pids+=("$!")
+        ;;
+      1)
+        tx_for "proposal-${index}-vote-0" "${validator0_key}" "${validator0_home}" kudorad tx gov vote "${proposal_id}" no --gas 300000 & vote_pids+=("$!")
+        tx_for "proposal-${index}-vote-1" "${validator1_key}" "${validator1_home}" kudorad tx gov vote "${proposal_id}" yes --gas 300000 & vote_pids+=("$!")
+        ;;
+      2)
+        tx_for "proposal-${index}-vote-1" "${validator1_key}" "${validator1_home}" kudorad tx gov vote "${proposal_id}" no --gas 300000 & vote_pids+=("$!")
+        tx_for "proposal-${index}-vote-2" "${validator2_key}" "${validator2_home}" kudorad tx gov vote "${proposal_id}" yes --gas 300000 & vote_pids+=("$!")
+        ;;
+      3)
+        tx_for "proposal-${index}-vote-0" "${validator0_key}" "${validator0_home}" kudorad tx gov vote "${proposal_id}" abstain --gas 300000 & vote_pids+=("$!")
+        tx_for "proposal-${index}-vote-2" "${validator2_key}" "${validator2_home}" kudorad tx gov vote "${proposal_id}" no_with_veto --gas 300000 & vote_pids+=("$!")
+        ;;
+    esac
+    for pid in "${vote_pids[@]}"; do wait "${pid}"; done
   done
 
   log "creating delegations and account history"
@@ -298,22 +331,43 @@ seed_demo() {
     if (( index % 2 == 0 )); then author="bob"; reactor="carol"; else author="carol"; reactor="bob"; fi
     post_message "discussion-${index}-root" "${proposal_id}" 0 "${author}" "${payload}"
     root_id="${LAST_MESSAGE_ID}"
+    local representative_key representative_home representative_vote
+    if (( index >= 36 || index % 4 != 2 )); then
+      representative_key="${validator0_key}"
+      representative_home="${validator0_home}"
+      if (( index >= 36 && index % 2 == 0 )); then representative_vote="Yes";
+      elif (( index >= 36 )); then representative_vote="Yes";
+      elif (( index % 4 == 0 )); then representative_vote="Yes";
+      elif (( index % 4 == 1 )); then representative_vote="No";
+      else representative_vote="Abstain"; fi
+    else
+      representative_key="${validator1_key}"
+      representative_home="${validator1_home}"
+      representative_vote="No"
+    fi
+    local -a enrichment_pids=()
+    post_message "discussion-${index}-representative" "${proposal_id}" 0 "${representative_key}" \
+      "$(jq -nc --arg vote "${representative_vote}" '{v:1,t:"text",role:"validator-comment",vote:$vote,text:("I voted " + $vote + " because the proposal needs a clear owner, measurable milestones and a public review.")}')" \
+      "${representative_home}" no & enrichment_pids+=("$!")
     local reaction="useful"
     if (( index % 4 == 3 )); then reaction="not-useful"; fi
     tx_for "discussion-${index}-proposal-reaction" "${reactor}" "${account_home}" \
-      kudorad tx discussion react "${proposal_id}" "${anchor_id}" "${reaction}" --gas 300000
+      kudorad tx discussion react "${proposal_id}" "${anchor_id}" "${reaction}" --gas 300000 & enrichment_pids+=("$!")
     tx_for "discussion-${index}-comment-reaction" alice "${account_home}" \
-      kudorad tx discussion react "${proposal_id}" "${root_id}" useful --gas 300000
+      kudorad tx discussion react "${proposal_id}" "${root_id}" useful --gas 300000 & enrichment_pids+=("$!")
+    for pid in "${enrichment_pids[@]}"; do wait "${pid}"; done
 
     if [[ "${group}" == "most-discussed" || $((index % 3)) == 0 ]]; then
       post_message "discussion-${index}-reply" "${proposal_id}" "${root_id}" alice \
         "$(jq -nc '{v:1,t:"text",text:"This is useful. I would also publish the evidence behind the checkpoint."}')"
     fi
     if [[ "${group}" == "most-discussed" ]]; then
+      local -a extra_pids=()
       post_message "discussion-${index}-extra-1" "${proposal_id}" 0 bob \
-        "$(jq -nc '{v:1,t:"poll",text:"A quick community pulse before the final checkpoint.",title:"Which proof should be public?",items:["Delivery receipt","Independent review","Community sign-off"]}')"
+        "$(jq -nc '{v:1,t:"poll",text:"A quick community pulse before the final checkpoint.",title:"Which proof should be public?",items:["Delivery receipt","Independent review","Community sign-off"]}')" "${account_home}" no & extra_pids+=("$!")
       post_message "discussion-${index}-extra-2" "${proposal_id}" 0 carol \
-        "$(jq -nc '{v:1,t:"budget",text:"Keep every amount easy to audit.",title:"Transparent budget",items:[["Build","50%"],["Review","30%"],["Support","20%"]]}')"
+        "$(jq -nc '{v:1,t:"budget",text:"Keep every amount easy to audit.",title:"Transparent budget",items:[["Build","50%"],["Review","30%"],["Support","20%"]]}')" "${account_home}" no & extra_pids+=("$!")
+      for pid in "${extra_pids[@]}"; do wait "${pid}"; done
     fi
     if (( index % 4 == 0 )); then
       tx_for "discussion-${index}-zap" bob "${account_home}" \

@@ -32,6 +32,7 @@ find "${STATE_DIR}" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +
 mkdir -p "${STATE_DIR}/logs" "${STATE_DIR}/results"
 
 declare -a validator_accounts
+declare -a validator_eth_addresses
 declare -a validator_operators
 
 for index in 0 1 2; do
@@ -57,6 +58,21 @@ for index in 0 1 2; do
   unset key_json
 
   [[ -n "${validator_accounts[${index}]}" ]] || fail "validator ${index} account address is missing"
+  validator_private_key="$(printf 'localnet\n' | kudorad keys unsafe-export-eth-key "${key_name}" \
+    --keyring-backend test \
+    --keyring-dir "${home}" \
+    --home "${home}" \
+    2>"${STATE_DIR}/logs/export-validator-${index}.stderr" | tail -n 1 | tr 'A-F' 'a-f')"
+  [[ "${validator_private_key}" =~ ^[0-9a-f]{64}$ ]] || fail "validator ${index} private key export failed"
+  kudora-evm-smoke-helper create-account \
+    --private-key "${validator_private_key}" \
+    --key-file "${STATE_DIR}/validator${index}.key" \
+    --info-file "${STATE_DIR}/validator${index}.json" \
+    >"${STATE_DIR}/logs/validator-${index}-account.stdout" \
+    2>"${STATE_DIR}/logs/validator-${index}-account.stderr"
+  [[ "$(jq -r '.cosmos_address' "${STATE_DIR}/validator${index}.json")" == "${validator_accounts[${index}]}" ]] || fail "validator ${index} exported key address mismatch"
+  validator_eth_addresses[${index}]="$(jq -r '.eth_address' "${STATE_DIR}/validator${index}.json")"
+  unset validator_private_key
   validator_operators[${index}]="$(kudorad keys show "${key_name}" \
     --address \
     --bech val \
@@ -224,6 +240,9 @@ jq -n \
   --arg validator0_operator "${validator_operators[0]}" \
   --arg validator1_operator "${validator_operators[1]}" \
   --arg validator2_operator "${validator_operators[2]}" \
+  --arg validator0_eth "${validator_eth_addresses[0]}" \
+  --arg validator1_eth "${validator_eth_addresses[1]}" \
+  --arg validator2_eth "${validator_eth_addresses[2]}" \
   '{
     chain_id: $chain_id,
     denom: $denom,
@@ -234,9 +253,9 @@ jq -n \
       evm_sender: {cosmos_address: $alice, eth_address: $alice_eth, key_file: "/state/evm-sender.key"}
     },
     validators: [
-      {index: 0, key: "validator0", account: $validator0_account, operator: $validator0_operator, home: "/state/validator0", power_percent: 40},
-      {index: 1, key: "validator1", account: $validator1_account, operator: $validator1_operator, home: "/state/validator1", power_percent: 30},
-      {index: 2, key: "validator2", account: $validator2_account, operator: $validator2_operator, home: "/state/validator2", power_percent: 30}
+      {index: 0, key: "validator0", account: $validator0_account, eth_address: $validator0_eth, operator: $validator0_operator, key_file: "/state/validator0.key", home: "/state/validator0", power_percent: 40},
+      {index: 1, key: "validator1", account: $validator1_account, eth_address: $validator1_eth, operator: $validator1_operator, key_file: "/state/validator1.key", home: "/state/validator1", power_percent: 30},
+      {index: 2, key: "validator2", account: $validator2_account, eth_address: $validator2_eth, operator: $validator2_operator, key_file: "/state/validator2.key", home: "/state/validator2", power_percent: 30}
     ]
   }' >"${STATE_DIR}/metadata.json"
 
