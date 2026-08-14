@@ -1,5 +1,5 @@
 x-node: &node
-  image: ${KUDORA_E2E_NODE_IMAGE:-kudora/kudorad:e2e}
+  image: kudora/kudorad:e2e
   user: "65532:65532"
   working_dir: /tmp
   environment:
@@ -14,7 +14,7 @@ x-node: &node
   stop_grace_period: 10s
 
 x-tool: &tool
-  image: ${KUDORA_E2E_RUNNER_IMAGE:-kudora/e2e-runner:local}
+  image: kudora/e2e-runner:local
   user: "0:0"
   volumes:
     - kudora-e2e-state:/state

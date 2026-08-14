@@ -61,6 +61,7 @@ COPY --from=builder /out/libwasmvm.aarch64.so /usr/lib/libwasmvm.aarch64.so
 COPY --from=builder /out/libwasmvm.x86_64.so /usr/lib/libwasmvm.x86_64.so
 COPY deploy/e2e/scripts/ /opt/kudora/e2e/
 COPY testutil/wasm/reflect_1_5.wasm /opt/kudora/e2e/contracts/reflect_1_5.wasm
+RUN chmod 0755 /opt/kudora/e2e/*.sh
 
 ENTRYPOINT ["/bin/bash"]
 

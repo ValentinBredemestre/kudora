@@ -3,6 +3,9 @@
 This environment validates Kudora from a user's point of view. It does not run
 unit tests and does not require Go, `jq`, `curl`, or `kudorad` on the host.
 Only Docker with Docker Compose and `make` are required.
+The Make targets invoke Docker directly and are suitable for GNU Make on
+Linux, macOS, and Windows with Docker Desktop. Bash and every other test tool
+run inside the test-runner image, not on the host.
 
 Run the complete suite from the repository root:
 
