@@ -447,6 +447,7 @@ func New(
 		tracer,
 	).WithStaticPrecompiles(map[common.Address]corevm.PrecompiledContract(kudoraStaticPrecompiles(
 		app.GovKeeper,
+		*app.StakingKeeper,
 		app.BankKeeper,
 		appCodec,
 		app.DiscussionKeeper,

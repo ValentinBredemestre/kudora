@@ -96,13 +96,13 @@ func TestStaticPrecompileSurfaceRemainsNarrow(t *testing.T) {
 	require.Equal(t, []string{
 		evmtypes.P256PrecompileAddress,
 		evmtypes.Bech32PrecompileAddress,
+		evmtypes.StakingPrecompileAddress,
 		evmtypes.GovPrecompileAddress,
 		discussiontypes.DiscussionPrecompileAddress,
 	}, kudoraActiveStaticPrecompiles())
 
 	precompiles := kudoraBaseStaticPrecompiles()
 	for _, forbidden := range []string{
-		evmtypes.StakingPrecompileAddress,
 		evmtypes.DistributionPrecompileAddress,
 		evmtypes.ICS20PrecompileAddress,
 		evmtypes.BankPrecompileAddress,

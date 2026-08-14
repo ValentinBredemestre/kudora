@@ -55,6 +55,11 @@ case "${MODE}" in
       echo "  Private key: $(tr -d '\n' <"${STATE_DIR}/${account}.key")"
       echo
     done
+    echo "Validators"
+    for index in 0 1 2; do
+      echo "  Kudora Validator $((index + 1)): $(jq -r ".validators[${index}].operator" "${STATE_DIR}/metadata.json")"
+    done
+    echo
     ;;
   height)
     wait_ready
@@ -73,7 +78,7 @@ case "${MODE}" in
       displayDenom: "KUD",
       decimals: 18,
       cosmosRestUrl: "http://localhost:1317",
-      cosmosRpcUrl: "http://localhost:26657",
+      cosmosRpcUrl: "http://localhost:3000/cosmos-rpc",
       evmRpcUrl: "http://localhost:8545",
       evmWsUrl: "ws://localhost:8546",
       discussionPrecompileAddress: "0x0000000000000000000000000000000000000900",
@@ -94,6 +99,12 @@ case "${MODE}" in
           cosmosAddress: .users.carol.cosmos_address
         }
       },
+      validators: [.validators[] | {
+        name: ("Kudora Validator " + ((.index + 1) | tostring)),
+        accountAddress: .account,
+        operatorAddress: .operator,
+        powerPercent: .power_percent
+      }],
       swap: {
         localnetOnly: true,
         routerAddress: .swap.router_address,

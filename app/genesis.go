@@ -18,6 +18,7 @@ import (
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
 	minttypes "github.com/cosmos/cosmos-sdk/x/mint/types"
+	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
 	discussionprecompile "github.com/Kudora-Labs/kudora/precompiles/discussion"
@@ -133,11 +134,13 @@ func kudoraBaseStaticPrecompiles() precompiletypes.StaticPrecompiles {
 
 func kudoraStaticPrecompiles(
 	govKeeper govkeeper.Keeper,
+	stakingKeeper stakingkeeper.Keeper,
 	bankKeeper bankkeeper.Keeper,
 	cargoCodec codec.Codec,
 	discussionKeeper discussionkeeper.Keeper,
 ) precompiletypes.StaticPrecompiles {
 	precompiles := kudoraBaseStaticPrecompiles().
+		WithStakingPrecompile(stakingKeeper, bankKeeper).
 		WithGovPrecompile(govKeeper, bankKeeper, cargoCodec)
 	discussion := discussionprecompile.NewPrecompile(discussionKeeper, bankKeeper)
 	precompiles[discussion.Address()] = discussion
@@ -146,6 +149,7 @@ func kudoraStaticPrecompiles(
 
 func kudoraActiveStaticPrecompiles() []string {
 	precompiles := kudoraBaseStaticPrecompiles()
+	precompiles[common.HexToAddress(evmtypes.StakingPrecompileAddress)] = nil
 	precompiles[common.HexToAddress(evmtypes.GovPrecompileAddress)] = nil
 	precompiles[common.HexToAddress(discussiontypes.DiscussionPrecompileAddress)] = nil
 	prague := make(map[string]struct{}, len(corevm.PrecompiledAddressesPrague))
