@@ -315,6 +315,52 @@ seed_demo() {
   local proposal_ids=() proposal_groups=()
   local proposal_file="${RESULT_DIR}/demo-proposal.json"
 
+  proposal_copy() {
+    local index="$1" title="$2" action="${2,}"
+    COPY_REQUESTED_AMOUNT="None"
+    case "${index}" in
+      0) COPY_REQUESTED_AMOUNT="120,000 KUD" ;;
+      4) COPY_REQUESTED_AMOUNT="60,000 KUD" ;;
+      5) COPY_REQUESTED_AMOUNT="45,000 KUD" ;;
+      8) COPY_REQUESTED_AMOUNT="90,000 KUD" ;;
+      11) COPY_REQUESTED_AMOUNT="250,000 KUD" ;;
+      15) COPY_REQUESTED_AMOUNT="75,000 KUD" ;;
+      16) COPY_REQUESTED_AMOUNT="110,000 KUD" ;;
+      22) COPY_REQUESTED_AMOUNT="5% of future network fees" ;;
+      25) COPY_REQUESTED_AMOUNT="180,000 KUD" ;;
+      27) COPY_REQUESTED_AMOUNT="40,000 KUD" ;;
+      29) COPY_REQUESTED_AMOUNT="35,000 KUD" ;;
+      32) COPY_REQUESTED_AMOUNT="80,000 KUD" ;;
+      33) COPY_REQUESTED_AMOUNT="210,000 KUD" ;;
+      36) COPY_REQUESTED_AMOUNT="100,000 KUD" ;;
+      40) COPY_REQUESTED_AMOUNT="50,000 KUD" ;;
+      41) COPY_REQUESTED_AMOUNT="150,000 KUD" ;;
+      43) COPY_REQUESTED_AMOUNT="65,000 KUD" ;;
+      45) COPY_REQUESTED_AMOUNT="85,000 KUD" ;;
+      46) COPY_REQUESTED_AMOUNT="120,000 KUD" ;;
+    esac
+
+    case $((index % 3)) in
+      0) COPY_SUMMARY="This proposal would ${action}." ;;
+      1) COPY_SUMMARY="The community is deciding whether Kudora should ${action}." ;;
+      2) COPY_SUMMARY="This vote decides whether to ${action}." ;;
+    esac
+
+    if [[ "${COPY_REQUESTED_AMOUNT}" != "None" ]]; then
+      COPY_CONTEXT="The community needs to confirm the business value, budget and owner before any KUD is committed."
+      COPY_OUTCOME="Kudora will ${action}. Funding will follow verified milestones instead of being released all at once."
+      COPY_CHANGES='["Publish the final scope, budget and accountable owner.","Release the first portion when work starts.","Verify delivery against public success measures.","Publish the final report before releasing the remaining KUD."]'
+    elif [[ "${title}" =~ (partnership|programme|collaboration|exercise|co-design|meetups) ]]; then
+      COPY_CONTEXT="This opportunity needs a clear partner, owner and success measure before Kudora commits."
+      COPY_OUTCOME="Kudora will ${action}, beginning with a time-limited pilot and a public decision on whether to continue."
+      COPY_CHANGES='["Confirm the partner, owner and scope in public.","Launch a time-limited pilot with clear success measures.","Publish the pilot results and community feedback.","Decide publicly whether to continue, change or stop the work."]'
+    else
+      COPY_CONTEXT="The current approach leaves an important rule or service unclear for members."
+      COPY_OUTCOME="Kudora will ${action}. The new approach will be reviewed with public evidence after its first full cycle."
+      COPY_CHANGES='["Publish the final rule or service scope in plain language.","Name the owner and the date the change starts.","Share a progress checkpoint with measurable evidence.","Review the result publicly and record any follow-up decision."]'
+    fi
+  }
+
   local validator0_key validator0_home validator1_key validator1_home validator2_key validator2_home
   validator0_key="$(jq -r '.validators[0].key' "${METADATA}")"
   validator0_home="$(jq -r '.validators[0].home' "${METADATA}")"
@@ -325,18 +371,10 @@ seed_demo() {
 
   log "creating 12 completed governance proposals"
   for index in $(seq 36 47); do
-    local title="${titles[${index}]}" action summary context outcome changes metadata proposal_id
-    action="${title,}"
-    summary="This decision asks whether Kudora should ${action}."
-    context="The community needs a clear public decision about whether to ${action}."
-    outcome="Kudora will ${action}, with one named owner and a public final result."
-    case $((index % 4)) in
-      0) changes='["Name the person or team responsible and publish a start date.","Share one progress update and the final result publicly."]' ;;
-      1) changes='["Publish the proposed rule in plain language.","Review its effect at a public checkpoint."]' ;;
-      2) changes='["Open the plan and budget for community review.","Report what was delivered against that plan."]' ;;
-      3) changes='["Run a small first phase with a named owner.","Publish the evidence before any wider rollout."]' ;;
-    esac
-    metadata="$(jq -nc --arg title "${title}" --arg summary "${summary}" --arg context "${context}" --arg outcome "${outcome}" --argjson changes "${changes}" '{title:$title,summary:$summary,v:1,context:$context,changes:$changes,outcome:$outcome}')"
+    local title="${titles[${index}]}" summary metadata proposal_id
+    proposal_copy "${index}" "${title}"
+    summary="${COPY_SUMMARY}"
+    metadata="$(jq -nc --arg title "${title}" --arg summary "${summary}" --arg context "${COPY_CONTEXT}" --arg outcome "${COPY_OUTCOME}" --arg requestedAmount "${COPY_REQUESTED_AMOUNT}" --argjson changes "${COPY_CHANGES}" '{title:$title,summary:$summary,v:1,context:$context,changes:$changes,outcome:$outcome,requestedAmount:$requestedAmount}')"
     jq -n \
       --arg authority "${gov_authority}" \
       --arg metadata "${metadata}" \
@@ -364,35 +402,10 @@ seed_demo() {
 
   log "creating 36 open governance proposals"
   for index in $(seq 0 35); do
-    local title="${titles[${index}]}" action summary context outcome changes metadata proposal_id
-    action="${title,}"
-    case $((index % 4)) in
-      0)
-        summary="This proposal would ${action}."
-        context="People need to decide whether this change is useful now."
-        outcome="Kudora will ${action}, with a named owner and a public delivery date."
-        changes='["Name the person or team responsible and publish a start date.","Share one progress update and the final result publicly."]'
-        ;;
-      1)
-        summary="The community is deciding whether Kudora should ${action}."
-        context="The current approach does not give everyone a clear answer or checkpoint."
-        outcome="The change will be published in plain language and reviewed in public."
-        changes='["Publish the proposed change in plain language.","Review its effect at a public checkpoint."]'
-        ;;
-      2)
-        summary="This vote decides whether to ${action}."
-        context="The community needs a visible plan before committing time or KUD."
-        outcome="Kudora will ${action} and report exactly what was delivered."
-        changes='["Open the plan and budget for community review.","Report what was delivered against that plan."]'
-        ;;
-      3)
-        summary="Members are choosing whether to ${action}."
-        context="A small, measurable first step can answer the remaining questions."
-        outcome="Kudora will ${action}, starting with a measured first phase."
-        changes='["Run a small first phase with a named owner.","Publish the evidence before any wider rollout."]'
-        ;;
-    esac
-    metadata="$(jq -nc --arg title "${title}" --arg summary "${summary}" --arg context "${context}" --arg outcome "${outcome}" --argjson changes "${changes}" '{title:$title,summary:$summary,v:1,context:$context,changes:$changes,outcome:$outcome}')"
+    local title="${titles[${index}]}" summary metadata proposal_id
+    proposal_copy "${index}" "${title}"
+    summary="${COPY_SUMMARY}"
+    metadata="$(jq -nc --arg title "${title}" --arg summary "${summary}" --arg context "${COPY_CONTEXT}" --arg outcome "${COPY_OUTCOME}" --arg requestedAmount "${COPY_REQUESTED_AMOUNT}" --argjson changes "${COPY_CHANGES}" '{title:$title,summary:$summary,v:1,context:$context,changes:$changes,outcome:$outcome,requestedAmount:$requestedAmount}')"
     jq -n \
       --arg authority "${gov_authority}" \
       --arg metadata "${metadata}" \
