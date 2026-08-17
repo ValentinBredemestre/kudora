@@ -165,18 +165,37 @@ visual_payload() {
       poll="What should be checked first?"
       ;;
   esac
-  jq -nc --arg title "${title}" --arg opening "${opening}" --arg poll "${poll}" '{
-    v:1,
-    t:"carousel",
-    text:$opening,
-    title:$title,
-    slides:[
-      {kind:"text",title:"Why this matters",items:[$opening,"The final result should remain understandable without technical knowledge."]},
-      {kind:"roadmap",title:"Public roadmap",items:["Name the owner and first delivery date","Publish a short progress update","Review the result with the community"]},
-      {kind:"budget",title:"Budget priorities",items:[{label:"Delivery",value:"55"},{label:"Independent review",value:"25"},{label:"Community support",value:"20"}]},
-      {kind:"poll",title:$poll,items:["Approve the full plan","Run a smaller pilot first","Revise and discuss again"]}
-    ]
-  }'
+  case "${variant}" in
+    0)
+      jq -nc --arg opening "${opening}" '{
+        v:1,t:"timeline",text:$opening,title:"A simple path people can follow",
+        items:["Hear concerns · this week","Publish the first version · next month","Review the result together · after three months"]
+      }'
+      ;;
+    1)
+      jq -nc --arg opening "${opening}" '{
+        v:1,t:"budget",text:$opening,title:"Where the effort goes",
+        items:[{label:"Build",value:"50"},{label:"Testing",value:"30"},{label:"Community support",value:"20"}]
+      }'
+      ;;
+    2)
+      jq -nc --arg opening "${opening}" --arg poll "${poll}" '{
+        v:1,t:"poll",text:$opening,title:$poll,multipleChoice:false,votes:40,
+        items:["Start with a small pilot","Use the full plan","Revise it together"],values:[22,11,7]
+      }'
+      ;;
+    *)
+      jq -nc --arg title "${title}" --arg opening "${opening}" --arg poll "${poll}" '{
+        v:1,t:"carousel",text:$opening,title:$title,
+        slides:[
+          {kind:"text",title:"Why this needs a decision",items:["People need one clear comparison",$opening,"Decision value · faster understanding, fewer hidden assumptions"]},
+          {kind:"timeline",title:"Three public checkpoints",items:["Prototype · 12 Sep","Community test · 03 Oct","Go / change / stop review · 24 Oct"]},
+          {kind:"budget",title:"Resources follow the public outcome",items:[{label:"Usable product",value:"55"},{label:"User testing",value:"25"},{label:"Support",value:"20"}]},
+          {kind:"poll",title:$poll,multipleChoice:false,votes:36,items:["Start with a pilot","Use the full plan","Revise together"],values:[18,11,7]}
+        ]
+      }'
+      ;;
+  esac
 }
 
 seed_account_activity() {
