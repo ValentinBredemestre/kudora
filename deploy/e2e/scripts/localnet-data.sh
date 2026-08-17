@@ -514,37 +514,54 @@ seed_demo() {
   done
   log "creating on-chain discussions, proposal reactions and zaps"
   for index in $(seq 0 47); do
-    local proposal_id="${proposal_ids[${index}]}" group="${proposal_groups[${index}]}" root_id payload author reactor
+    local proposal_id="${proposal_ids[${index}]}" group="${proposal_groups[${index}]}" root_id payload author reactor comment_reactor
     post_message "discussion-${index}-anchor" "${proposal_id}" 0 alice \
       "$(jq -nc '{v:1,t:"text",role:"proposal",text:"On-chain community signal for this proposal."}')"
     local anchor_id="${LAST_MESSAGE_ID}"
     payload="$(visual_payload "${index}")"
-    if (( index % 2 == 0 )); then author="bob"; reactor="carol"; else author="carol"; reactor="bob"; fi
+    case $((index % 3)) in
+      0) author="alice"; reactor="bob"; comment_reactor="carol" ;;
+      1) author="bob"; reactor="carol"; comment_reactor="alice" ;;
+      *) author="carol"; reactor="alice"; comment_reactor="bob" ;;
+    esac
     post_message "discussion-${index}-root" "${proposal_id}" 0 "${author}" "${payload}"
     root_id="${LAST_MESSAGE_ID}"
-    local representative_key representative_home representative_vote
-    if (( index >= 36 || index % 4 != 2 )); then
-      representative_key="${validator0_key}"
-      representative_home="${validator0_home}"
-      if (( index >= 36 && index % 2 == 0 )); then representative_vote="Yes";
-      elif (( index >= 36 )); then representative_vote="Yes";
-      elif (( index % 4 == 0 )); then representative_vote="Yes";
-      elif (( index % 4 == 1 )); then representative_vote="No";
-      else representative_vote="Abstain"; fi
-    else
-      representative_key="${validator1_key}"
-      representative_home="${validator1_home}"
-      representative_vote="No"
-    fi
+    local representative_key representative_home representative_vote representative_comment
+    case $((index % 4)) in
+      0)
+        representative_key="${validator0_key}"
+        representative_home="${validator0_home}"
+        representative_vote="Yes"
+        representative_comment="I voted Yes because a named owner and public checkpoints make progress easy for everyone to follow."
+        ;;
+      1)
+        representative_key="${validator1_key}"
+        representative_home="${validator1_home}"
+        representative_vote="Yes"
+        representative_comment="I voted Yes because the proposal starts with a focused delivery plan and leaves room to learn from community feedback."
+        ;;
+      2)
+        representative_key="${validator2_key}"
+        representative_home="${validator2_home}"
+        representative_vote="Yes"
+        representative_comment="I voted Yes because every budget step is tied to evidence that the community can review before more KUD is used."
+        ;;
+      *)
+        representative_key="${validator0_key}"
+        representative_home="${validator0_home}"
+        representative_vote="Abstain"
+        representative_comment="I abstained because the goal is useful, but the final safeguard and the person responsible still need to be made public."
+        ;;
+    esac
     local -a enrichment_pids=()
     post_message "discussion-${index}-representative" "${proposal_id}" 0 "${representative_key}" \
-      "$(jq -nc --arg vote "${representative_vote}" '{v:1,t:"text",role:"validator-comment",vote:$vote,text:("I voted " + $vote + " because the proposal needs a clear owner, measurable milestones and a public review.")}')" \
+      "$(jq -nc --arg vote "${representative_vote}" --arg text "${representative_comment}" '{v:1,t:"text",role:"validator-comment",vote:$vote,text:$text}')" \
       "${representative_home}" no & enrichment_pids+=("$!")
     local reaction="useful"
     if (( index % 4 == 3 )); then reaction="not-useful"; fi
     tx_for "discussion-${index}-proposal-reaction" "${reactor}" "${account_home}" \
       kudorad tx discussion react "${proposal_id}" "${anchor_id}" "${reaction}" --gas 300000 & enrichment_pids+=("$!")
-    tx_for "discussion-${index}-comment-reaction" alice "${account_home}" \
+    tx_for "discussion-${index}-comment-reaction" "${comment_reactor}" "${account_home}" \
       kudorad tx discussion react "${proposal_id}" "${root_id}" useful --gas 300000 & enrichment_pids+=("$!")
     for pid in "${enrichment_pids[@]}"; do wait "${pid}"; done
 
