@@ -141,9 +141,81 @@ post_message() {
   fi
 }
 
+seed_account_activity() {
+  local marker="${RESULT_DIR}/account-activity-seed-v1.json"
+  if [[ -s "${marker}" ]]; then
+    log "account activity already exists (3 rewards, 6 payments, 3 moves)"
+    return
+  fi
+
+  local validator0_key validator0_home validator0_address
+  local validator1_key validator1_home validator1_address
+  local validator2_key validator2_home
+  validator0_key="$(jq -r '.validators[0].key' "${METADATA}")"
+  validator0_home="$(jq -r '.validators[0].home' "${METADATA}")"
+  validator0_address="$(jq -r '.validators[0].account' "${METADATA}")"
+  validator1_key="$(jq -r '.validators[1].key' "${METADATA}")"
+  validator1_home="$(jq -r '.validators[1].home' "${METADATA}")"
+  validator1_address="$(jq -r '.validators[1].account' "${METADATA}")"
+  validator2_key="$(jq -r '.validators[2].key' "${METADATA}")"
+  validator2_home="$(jq -r '.validators[2].home' "${METADATA}")"
+
+  log "creating 3 real on-chain airdrop rewards"
+  tx_for "activity-reward-alice" "${validator0_key}" "${validator0_home}" \
+    kudorad tx bank send "${validator0_key}" "${alice_address}" "$(to_akud 125.5)${DENOM}" --gas 300000 --note "Kudora localnet airdrop reward"
+  local reward_alice_hash="${LAST_TX_HASH}"
+  tx_for "activity-reward-bob" "${validator1_key}" "${validator1_home}" \
+    kudorad tx bank send "${validator1_key}" "${bob_address}" "$(to_akud 95.25)${DENOM}" --gas 300000 --note "Kudora localnet airdrop reward"
+  local reward_bob_hash="${LAST_TX_HASH}"
+  tx_for "activity-reward-carol" "${validator2_key}" "${validator2_home}" \
+    kudorad tx bank send "${validator2_key}" "${carol_address}" "$(to_akud 70.75)${DENOM}" --gas 300000 --note "Kudora localnet airdrop reward"
+  local reward_carol_hash="${LAST_TX_HASH}"
+
+  log "creating 6 real payments between users and validators"
+  tx_for "activity-alice-bob" alice "${account_home}" \
+    kudorad tx bank send alice "${bob_address}" "$(to_akud 18.5)${DENOM}" --gas 300000 --note "Kudora demo payment"
+  tx_for "activity-bob-carol" bob "${account_home}" \
+    kudorad tx bank send bob "${carol_address}" "$(to_akud 7.25)${DENOM}" --gas 300000 --note "Kudora demo payment"
+  tx_for "activity-carol-alice" carol "${account_home}" \
+    kudorad tx bank send carol "${alice_address}" "$(to_akud 4.75)${DENOM}" --gas 300000 --note "Kudora demo payment"
+  tx_for "activity-bob-alice" bob "${account_home}" \
+    kudorad tx bank send bob "${alice_address}" "$(to_akud 2.5)${DENOM}" --gas 300000 --note "Kudora demo payment"
+  tx_for "activity-alice-validator" alice "${account_home}" \
+    kudorad tx bank send alice "${validator1_address}" "$(to_akud 3)${DENOM}" --gas 300000 --note "Kudora validator support payment"
+  tx_for "activity-carol-validator" carol "${account_home}" \
+    kudorad tx bank send carol "${validator0_address}" "$(to_akud 1.5)${DENOM}" --gas 300000 --note "Kudora validator support payment"
+
+  log "creating 3 real KUD to MockUSDC moves"
+  local deployment="${RESULT_DIR}/swap-deployment.json"
+  [[ -s "${deployment}" ]] || fail "local swap is not deployed; run make localnet"
+  local swap_alice="${RESULT_DIR}/account-activity-swap-alice.json"
+  local swap_bob="${RESULT_DIR}/account-activity-swap-bob.json"
+  local swap_carol="${RESULT_DIR}/account-activity-swap-carol.json"
+  kudora-evm-smoke-helper swap-smoke --rpc-url "http://validator-0:8545" --chain-id 120001 \
+    --sender-key-file "${STATE_DIR}/alice.key" --deployment-file "${deployment}" --result-file "${swap_alice}" --amount-wei "$(to_akud 2)"
+  kudora-evm-smoke-helper swap-smoke --rpc-url "http://validator-0:8545" --chain-id 120001 \
+    --sender-key-file "${STATE_DIR}/bob.key" --deployment-file "${deployment}" --result-file "${swap_bob}" --amount-wei "$(to_akud 1.25)"
+  kudora-evm-smoke-helper swap-smoke --rpc-url "http://validator-0:8545" --chain-id 120001 \
+    --sender-key-file "${STATE_DIR}/carol.key" --deployment-file "${deployment}" --result-file "${swap_carol}" --amount-wei "$(to_akud 0.75)"
+  jq -e '.receipt_status == "0x1" and .kud_in == "2000000000000000000"' "${swap_alice}" >/dev/null
+  jq -e '.receipt_status == "0x1" and .kud_in == "1250000000000000000"' "${swap_bob}" >/dev/null
+  jq -e '.receipt_status == "0x1" and .kud_in == "750000000000000000"' "${swap_carol}" >/dev/null
+
+  jq -n \
+    --arg reward_alice "${reward_alice_hash}" \
+    --arg reward_bob "${reward_bob_hash}" \
+    --arg reward_carol "${reward_carol_hash}" \
+    --slurpfile swap_alice "${swap_alice}" \
+    --slurpfile swap_bob "${swap_bob}" \
+    --slurpfile swap_carol "${swap_carol}" \
+    '{version:1,rewards:[$reward_alice,$reward_bob,$reward_carol],payments:6,moves:[$swap_alice[0].transaction_hash,$swap_bob[0].transaction_hash,$swap_carol[0].transaction_hash]}' >"${marker}"
+  log "account activity ready: 3 rewards, 6 payments, 3 moves"
+}
+
 seed_demo() {
   local marker="${RESULT_DIR}/demo-seed.json"
   if [[ -s "${marker}" ]]; then
+    seed_account_activity
     log "demo data already exists ($(jq -r '.proposals' "${marker}") proposals)"
     return
   fi
@@ -299,7 +371,7 @@ seed_demo() {
     for pid in "${vote_pids[@]}"; do wait "${pid}"; done
   done
 
-  log "creating delegations and account history"
+  log "creating delegations"
   local delegates=(alice bob carol)
   for index in 0 1 2; do
     local operator
@@ -307,14 +379,6 @@ seed_demo() {
     tx_for "delegate-${delegates[${index}]}" "${delegates[${index}]}" "${account_home}" \
       kudorad tx staking delegate "${operator}" "10000000000000000000${DENOM}" --gas 400000
   done
-  for index in $(seq 1 9); do
-    case $((index % 3)) in
-      0) tx_for "history-${index}" alice "${account_home}" kudorad tx bank send alice "${bob_address}" "250000000000000000${DENOM}" --gas 300000 ;;
-      1) tx_for "history-${index}" bob "${account_home}" kudorad tx bank send bob "${carol_address}" "250000000000000000${DENOM}" --gas 300000 ;;
-      2) tx_for "history-${index}" carol "${account_home}" kudorad tx bank send carol "${alice_address}" "250000000000000000${DENOM}" --gas 300000 ;;
-    esac
-  done
-
   log "creating on-chain discussions, proposal reactions and zaps"
   for index in $(seq 0 47); do
     local proposal_id="${proposal_ids[${index}]}" group="${proposal_groups[${index}]}" root_id payload kind author reactor
@@ -375,6 +439,8 @@ seed_demo() {
     fi
     if (( (index + 1) % 6 == 0 )); then log "$((index + 1))/48 proposals enriched"; fi
   done
+
+  seed_account_activity
 
   local passed rejected open messages
   passed="$(curl -sf "${REST}/cosmos/gov/v1/proposals?proposal_status=PROPOSAL_STATUS_PASSED&pagination.limit=100" | jq '.proposals | length')"
