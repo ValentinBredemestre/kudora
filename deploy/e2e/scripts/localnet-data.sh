@@ -141,6 +141,44 @@ post_message() {
   fi
 }
 
+visual_payload() {
+  local variant="$(( $1 % 4 ))" title opening poll
+  case "${variant}" in
+    0)
+      title="Delivery and public review"
+      opening="A named owner and visible checkpoints make delivery easier to trust."
+      poll="Which delivery checkpoint matters most?"
+      ;;
+    1)
+      title="Community participation plan"
+      opening="People need a simple way to understand the choice and follow the result."
+      poll="How should the community review progress?"
+      ;;
+    2)
+      title="Responsible budget plan"
+      opening="Every amount should be connected to a result that anyone can verify."
+      poll="Which proof should unlock the final budget?"
+      ;;
+    *)
+      title="Partnership success plan"
+      opening="Both teams should publish their responsibilities and review the outcome together."
+      poll="What should be checked first?"
+      ;;
+  esac
+  jq -nc --arg title "${title}" --arg opening "${opening}" --arg poll "${poll}" '{
+    v:1,
+    t:"carousel",
+    text:$opening,
+    title:$title,
+    slides:[
+      {kind:"text",title:"Why this matters",items:[$opening,"The final result should remain understandable without technical knowledge."]},
+      {kind:"roadmap",title:"Public roadmap",items:["Name the owner and first delivery date","Publish a short progress update","Review the result with the community"]},
+      {kind:"budget",title:"Budget priorities",items:[{label:"Delivery",value:"55"},{label:"Independent review",value:"25"},{label:"Community support",value:"20"}]},
+      {kind:"poll",title:$poll,items:["Approve the full plan","Run a smaller pilot first","Revise and discuss again"]}
+    ]
+  }'
+}
+
 seed_account_activity() {
   local marker="${RESULT_DIR}/account-activity-seed-v1.json"
   if [[ -s "${marker}" ]]; then
@@ -457,17 +495,11 @@ seed_demo() {
   done
   log "creating on-chain discussions, proposal reactions and zaps"
   for index in $(seq 0 47); do
-    local proposal_id="${proposal_ids[${index}]}" group="${proposal_groups[${index}]}" root_id payload kind author reactor
+    local proposal_id="${proposal_ids[${index}]}" group="${proposal_groups[${index}]}" root_id payload author reactor
     post_message "discussion-${index}-anchor" "${proposal_id}" 0 alice \
       "$(jq -nc '{v:1,t:"text",role:"proposal",text:"On-chain community signal for this proposal."}')"
     local anchor_id="${LAST_MESSAGE_ID}"
-    case $((index % 5)) in
-      0) kind="text"; payload="$(jq -nc --arg n "$((index + 1))" '{v:1,t:"text",text:("I support a clear owner and public checkpoint for decision " + $n + ".")}')" ;;
-      1) kind="timeline"; payload="$(jq -nc '{v:1,t:"timeline",text:"A practical delivery sequence.",title:"Public delivery timeline",items:["Week 1 · confirm owner","Week 2 · publish first checkpoint","Week 4 · community review"]}')" ;;
-      2) kind="budget"; payload="$(jq -nc '{v:1,t:"budget",text:"The budget should stay visible.",title:"Suggested allocation",items:[["Delivery","60%"],["Independent review","25%"],["Contingency","15%"]]}')" ;;
-      3) kind="poll"; payload="$(jq -nc '{v:1,t:"poll",text:"Which checkpoint matters most?",title:"Community checkpoint",items:["Public owner","Weekly update","Independent review"]}')" ;;
-      4) kind="carousel"; payload="$(jq -nc '{v:1,t:"carousel",text:"Three outcomes worth tracking.",title:"What success looks like",items:["Simple to understand","Publicly measurable","Owned by a named team"]}')" ;;
-    esac
+    payload="$(visual_payload "${index}")"
     if (( index % 2 == 0 )); then author="bob"; reactor="carol"; else author="carol"; reactor="bob"; fi
     post_message "discussion-${index}-root" "${proposal_id}" 0 "${author}" "${payload}"
     root_id="${LAST_MESSAGE_ID}"
@@ -504,9 +536,9 @@ seed_demo() {
     if [[ "${group}" == "past" ]]; then
       local -a extra_pids=()
       post_message "discussion-${index}-extra-1" "${proposal_id}" 0 bob \
-        "$(jq -nc '{v:1,t:"poll",text:"A quick community pulse before the final checkpoint.",title:"Which proof should be public?",items:["Delivery receipt","Independent review","Community sign-off"]}')" "${account_home}" no & extra_pids+=("$!")
+        "$(visual_payload "$((index + 1))")" "${account_home}" no & extra_pids+=("$!")
       post_message "discussion-${index}-extra-2" "${proposal_id}" 0 carol \
-        "$(jq -nc '{v:1,t:"budget",text:"Keep every amount easy to audit.",title:"Transparent budget",items:[["Build","50%"],["Review","30%"],["Support","20%"]]}')" "${account_home}" no & extra_pids+=("$!")
+        "$(visual_payload "$((index + 2))")" "${account_home}" no & extra_pids+=("$!")
       for pid in "${extra_pids[@]}"; do wait "${pid}"; done
     fi
     if (( index % 4 == 0 )); then
