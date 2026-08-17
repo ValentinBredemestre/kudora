@@ -325,9 +325,18 @@ seed_demo() {
 
   log "creating 12 completed governance proposals"
   for index in $(seq 36 47); do
-    local title="${titles[${index}]}" summary metadata proposal_id
-    summary="A public decision with measurable outcomes, clear ownership and community checkpoints."
-    metadata="$(jq -nc --arg title "${title}" --arg summary "${summary}" '{title:$title,summary:$summary,v:1,group:"most-discussed",context:"The community needs a transparent decision backed by public evidence.",changes:["Publish the decision, owner and milestones on-chain.","Review progress with the community."],outcome:"Anyone can verify the result and follow delivery."}')"
+    local title="${titles[${index}]}" action summary context outcome changes metadata proposal_id
+    action="${title,}"
+    summary="This decision asks whether Kudora should ${action}."
+    context="The community needs a clear public decision about whether to ${action}."
+    outcome="Kudora will ${action}, with one named owner and a public final result."
+    case $((index % 4)) in
+      0) changes='["Name the person or team responsible and publish a start date.","Share one progress update and the final result publicly."]' ;;
+      1) changes='["Publish the proposed rule in plain language.","Review its effect at a public checkpoint."]' ;;
+      2) changes='["Open the plan and budget for community review.","Report what was delivered against that plan."]' ;;
+      3) changes='["Run a small first phase with a named owner.","Publish the evidence before any wider rollout."]' ;;
+    esac
+    metadata="$(jq -nc --arg title "${title}" --arg summary "${summary}" --arg context "${context}" --arg outcome "${outcome}" --argjson changes "${changes}" '{title:$title,summary:$summary,v:1,context:$context,changes:$changes,outcome:$outcome}')"
     jq -n \
       --arg authority "${gov_authority}" \
       --arg metadata "${metadata}" \
@@ -339,7 +348,7 @@ seed_demo() {
       kudorad tx gov submit-proposal "${proposal_file}" --gas 1000000
     proposal_id="$(curl -sf "${REST}/cosmos/gov/v1/proposals?pagination.limit=1&pagination.reverse=true" | jq -r '.proposals[0].id')"
     proposal_ids[${index}]="${proposal_id}"
-    proposal_groups[${index}]="most-discussed"
+    proposal_groups[${index}]="past"
     local -a vote_pids=()
     if (( index % 2 == 0 )); then
       tx_for "proposal-${index}-vote-0" "${validator0_key}" "${validator0_home}" kudorad tx gov vote "${proposal_id}" yes --gas 300000 & vote_pids+=("$!")
@@ -355,15 +364,35 @@ seed_demo() {
 
   log "creating 36 open governance proposals"
   for index in $(seq 0 35); do
-    local title="${titles[${index}]}" group summary metadata proposal_id demo_hours
-    if (( index < 12 )); then group="active"; elif (( index < 24 )); then group="representatives"; else group="closing"; fi
-    case $((index % 12)) in
-      0) demo_hours=3 ;; 1) demo_hours=6 ;; 2) demo_hours=9 ;; 3) demo_hours=12 ;;
-      4) demo_hours=18 ;; 5) demo_hours=23 ;; 6) demo_hours=30 ;; 7) demo_hours=36 ;;
-      8) demo_hours=48 ;; 9) demo_hours=60 ;; 10) demo_hours=72 ;; 11) demo_hours=96 ;;
+    local title="${titles[${index}]}" action summary context outcome changes metadata proposal_id
+    action="${title,}"
+    case $((index % 4)) in
+      0)
+        summary="This proposal would ${action}."
+        context="People need to decide whether this change is useful now."
+        outcome="Kudora will ${action}, with a named owner and a public delivery date."
+        changes='["Name the person or team responsible and publish a start date.","Share one progress update and the final result publicly."]'
+        ;;
+      1)
+        summary="The community is deciding whether Kudora should ${action}."
+        context="The current approach does not give everyone a clear answer or checkpoint."
+        outcome="The change will be published in plain language and reviewed in public."
+        changes='["Publish the proposed change in plain language.","Review its effect at a public checkpoint."]'
+        ;;
+      2)
+        summary="This vote decides whether to ${action}."
+        context="The community needs a visible plan before committing time or KUD."
+        outcome="Kudora will ${action} and report exactly what was delivered."
+        changes='["Open the plan and budget for community review.","Report what was delivered against that plan."]'
+        ;;
+      3)
+        summary="Members are choosing whether to ${action}."
+        context="A small, measurable first step can answer the remaining questions."
+        outcome="Kudora will ${action}, starting with a measured first phase."
+        changes='["Run a small first phase with a named owner.","Publish the evidence before any wider rollout."]'
+        ;;
     esac
-    summary="A focused proposal written in plain language with a public delivery checkpoint."
-    metadata="$(jq -nc --arg title "${title}" --arg summary "${summary}" --arg group "${group}" --argjson demoHours "${demo_hours}" '{title:$title,summary:$summary,v:1,group:$group,demoHours:$demoHours,context:"This proposal turns a community need into one verifiable decision.",changes:["Record the commitment and responsible owner on-chain.","Publish a progress checkpoint for everyone."],outcome:"The community can inspect both the decision and its follow-up."}')"
+    metadata="$(jq -nc --arg title "${title}" --arg summary "${summary}" --arg context "${context}" --arg outcome "${outcome}" --argjson changes "${changes}" '{title:$title,summary:$summary,v:1,context:$context,changes:$changes,outcome:$outcome}')"
     jq -n \
       --arg authority "${gov_authority}" \
       --arg metadata "${metadata}" \
@@ -375,7 +404,7 @@ seed_demo() {
       kudorad tx gov submit-proposal "${proposal_file}" --gas 1000000
     proposal_id="$(curl -sf "${REST}/cosmos/gov/v1/proposals?pagination.limit=1&pagination.reverse=true" | jq -r '.proposals[0].id')"
     proposal_ids[${index}]="${proposal_id}"
-    proposal_groups[${index}]="${group}"
+    proposal_groups[${index}]="open"
     local -a vote_pids=()
     case "${index}" in
       0) tx_for "proposal-${index}-alice-vote" alice "${account_home}" kudorad tx gov vote "${proposal_id}" yes --gas 300000 & vote_pids+=("$!") ;;
@@ -455,11 +484,11 @@ seed_demo() {
       kudorad tx discussion react "${proposal_id}" "${root_id}" useful --gas 300000 & enrichment_pids+=("$!")
     for pid in "${enrichment_pids[@]}"; do wait "${pid}"; done
 
-    if [[ "${group}" == "most-discussed" || $((index % 3)) == 0 ]]; then
+    if [[ "${group}" == "past" || $((index % 3)) == 0 ]]; then
       post_message "discussion-${index}-reply" "${proposal_id}" "${root_id}" alice \
         "$(jq -nc '{v:1,t:"text",text:"This is useful. I would also publish the evidence behind the checkpoint."}')"
     fi
-    if [[ "${group}" == "most-discussed" ]]; then
+    if [[ "${group}" == "past" ]]; then
       local -a extra_pids=()
       post_message "discussion-${index}-extra-1" "${proposal_id}" 0 bob \
         "$(jq -nc '{v:1,t:"poll",text:"A quick community pulse before the final checkpoint.",title:"Which proof should be public?",items:["Delivery receipt","Independent review","Community sign-off"]}')" "${account_home}" no & extra_pids+=("$!")
