@@ -120,7 +120,7 @@ fund_wallets() {
     source_key="$(jq -r ".validators[${index}].key" "${METADATA}")"
     source_home="$(jq -r ".validators[${index}].home" "${METADATA}")"
     tx_for "fund-${account}-$(date +%s)" "${source_key}" "${source_home}" \
-      kudorad tx bank send "${source_key}" "${recipient}" "${amount}${DENOM}" --gas 300000
+      kudorad tx bank send "${source_key}" "${recipient}" "${amount}${DENOM}" --gas 300000 --note "Kudora localnet user fund"
     log "${account^}: +${display_amount} KUD, balance $(balance_kud "${recipient}") KUD"
   done
 }
@@ -212,10 +212,44 @@ seed_account_activity() {
   log "account activity ready: 3 rewards, 6 payments, 3 moves"
 }
 
+seed_zap_activity() {
+  local marker="${RESULT_DIR}/account-zap-seed-v1.json"
+  if [[ -s "${marker}" ]]; then
+    log "zap activity already exists (3 cross-account zaps)"
+    return
+  fi
+
+  local -a proposal_ids=()
+  mapfile -t proposal_ids < <(curl -sf "${REST}/cosmos/gov/v1/proposals?pagination.limit=3" | jq -r '.proposals[].id')
+  [[ ${#proposal_ids[@]} -eq 3 ]] || fail "three seeded proposals are required for zap activity"
+  local alice_proposal="${proposal_ids[0]}" bob_proposal="${proposal_ids[1]}" carol_proposal="${proposal_ids[2]}"
+  local alice_message bob_message carol_message
+  alice_message="$(curl -sf "${REST}/kudora/discussion/v1/messages/${alice_proposal}?pagination.limit=3" | jq -r '.messages[1].message_id // empty')"
+  bob_message="$(curl -sf "${REST}/kudora/discussion/v1/messages/${bob_proposal}?pagination.limit=3" | jq -r '.messages[1].message_id // empty')"
+  carol_message="$(curl -sf "${REST}/kudora/discussion/v1/messages/${carol_proposal}?pagination.limit=3" | jq -r '.messages[0].message_id // empty')"
+  [[ -n "${alice_message}" && -n "${bob_message}" && -n "${carol_message}" ]] || fail "seeded discussion messages were not found for zap activity"
+
+  log "creating 3 real cross-account zaps"
+  tx_for "activity-zap-alice-bob" alice "${account_home}" \
+    kudorad tx discussion zap "${alice_proposal}" "${alice_message}" "$(to_akud 0.4)" --gas 300000
+  local alice_hash="${LAST_TX_HASH}"
+  tx_for "activity-zap-bob-carol" bob "${account_home}" \
+    kudorad tx discussion zap "${bob_proposal}" "${bob_message}" "$(to_akud 0.3)" --gas 300000
+  local bob_hash="${LAST_TX_HASH}"
+  tx_for "activity-zap-carol-alice" carol "${account_home}" \
+    kudorad tx discussion zap "${carol_proposal}" "${carol_message}" "$(to_akud 0.2)" --gas 300000
+  local carol_hash="${LAST_TX_HASH}"
+
+  jq -n --arg alice "${alice_hash}" --arg bob "${bob_hash}" --arg carol "${carol_hash}" \
+    '{version:1,zaps:{alice:$alice,bob:$bob,carol:$carol}}' >"${marker}"
+  log "zap activity ready: Alice 0.40 KUD, Bob 0.30 KUD, Carol 0.20 KUD"
+}
+
 seed_demo() {
   local marker="${RESULT_DIR}/demo-seed.json"
   if [[ -s "${marker}" ]]; then
     seed_account_activity
+    seed_zap_activity
     log "demo data already exists ($(jq -r '.proposals' "${marker}") proposals)"
     return
   fi
@@ -441,6 +475,7 @@ seed_demo() {
   done
 
   seed_account_activity
+  seed_zap_activity
 
   local passed rejected open messages
   passed="$(curl -sf "${REST}/cosmos/gov/v1/proposals?proposal_status=PROPOSAL_STATUS_PASSED&pagination.limit=100" | jq '.proposals | length')"
