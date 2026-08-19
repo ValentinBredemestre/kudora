@@ -82,7 +82,7 @@ case "${MODE}" in
       decimals: 18,
       cosmosRestUrl: "http://localhost:1317",
       cosmosRpcUrl: "http://localhost:3000/cosmos-rpc",
-      evmRpcUrl: "http://localhost:8545",
+      evmRpcUrl: "http://localhost:3000/evm-rpc",
       evmWsUrl: "ws://localhost:8546",
       discussionPrecompileAddress: "0x0000000000000000000000000000000000000900",
       governancePrecompileAddress: "0x0000000000000000000000000000000000000805",
