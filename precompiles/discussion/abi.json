@@ -34,6 +34,16 @@
   },
   {
     "inputs": [
+      {"internalType": "uint64", "name": "proposalId", "type": "uint64"},
+      {"internalType": "uint8", "name": "option", "type": "uint8"}
+    ],
+    "name": "vote",
+    "outputs": [{"internalType": "bool", "name": "success", "type": "bool"}],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
       {"internalType": "address", "name": "session", "type": "address"},
       {"internalType": "uint64", "name": "expiresAt", "type": "uint64"},
       {"internalType": "uint256", "name": "fundAmount", "type": "uint256"}

@@ -14,6 +14,7 @@ import (
 
 	storetypes "github.com/cosmos/cosmos-sdk/store/v2/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 
 	"github.com/Kudora-Labs/kudora/x/discussion/keeper"
 	"github.com/Kudora-Labs/kudora/x/discussion/types"
@@ -36,12 +37,13 @@ func init() {
 type Precompile struct {
 	common.Precompile
 	abi.ABI
-	keeper keeper.Keeper
+	keeper       keeper.Keeper
+	govMsgServer govtypes.MsgServer
 }
 
 var _ vm.PrecompiledContract = Precompile{}
 
-func NewPrecompile(k keeper.Keeper, bankKeeper common.BankKeeper) Precompile {
+func NewPrecompile(k keeper.Keeper, bankKeeper common.BankKeeper, govMsgServer govtypes.MsgServer) Precompile {
 	return Precompile{
 		Precompile: common.Precompile{
 			KvGasConfig:           storetypes.KVGasConfig(),
@@ -49,8 +51,9 @@ func NewPrecompile(k keeper.Keeper, bankKeeper common.BankKeeper) Precompile {
 			ContractAddress:       ethcommon.HexToAddress(types.DiscussionPrecompileAddress),
 			BalanceHandlerFactory: common.NewBalanceHandlerFactory(bankKeeper),
 		},
-		ABI:    ABI,
-		keeper: k,
+		ABI:          ABI,
+		keeper:       k,
+		govMsgServer: govMsgServer,
 	}
 }
 
@@ -109,6 +112,23 @@ func (p Precompile) execute(ctx sdk.Context, contract *vm.Contract, readonly boo
 			return nil, err
 		}
 		return method.Outputs.Pack(true)
+	case "vote":
+		proposalID, option, err := voteArgs(args)
+		if err != nil {
+			return nil, err
+		}
+		voter, err := p.keeper.SessionOwner(ctx, signer)
+		if err != nil {
+			return nil, err
+		}
+		if _, err := p.govMsgServer.Vote(ctx, &govtypes.MsgVote{
+			ProposalId: proposalID,
+			Voter:      voter,
+			Option:     govtypes.VoteOption(option),
+		}); err != nil {
+			return nil, err
+		}
+		return method.Outputs.Pack(true)
 	case "authorizeSession":
 		session, expiresAt, fundAmount, err := sessionArgs(args)
 		if err != nil {
@@ -164,6 +184,18 @@ func reactArgs(args []interface{}) (uint64, uint64, uint8, error) {
 		return 0, 0, 0, fmt.Errorf("invalid react arguments")
 	}
 	return proposalID, messageID, reaction, nil
+}
+
+func voteArgs(args []interface{}) (uint64, uint8, error) {
+	if len(args) != 2 {
+		return 0, 0, fmt.Errorf("expected 2 arguments")
+	}
+	proposalID, ok1 := args[0].(uint64)
+	option, ok2 := args[1].(uint8)
+	if !ok1 || !ok2 {
+		return 0, 0, fmt.Errorf("invalid vote arguments")
+	}
+	return proposalID, option, nil
 }
 
 func valueArgs(args []interface{}) (uint64, uint64, *big.Int, error) {

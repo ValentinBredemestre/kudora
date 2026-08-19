@@ -142,7 +142,11 @@ func kudoraStaticPrecompiles(
 	precompiles := kudoraBaseStaticPrecompiles().
 		WithStakingPrecompile(stakingKeeper, bankKeeper).
 		WithGovPrecompile(govKeeper, bankKeeper, cargoCodec)
-	discussion := discussionprecompile.NewPrecompile(discussionKeeper, bankKeeper)
+	discussion := discussionprecompile.NewPrecompile(
+		discussionKeeper,
+		bankKeeper,
+		govkeeper.NewMsgServerImpl(&govKeeper),
+	)
 	precompiles[discussion.Address()] = discussion
 	return precompiles
 }

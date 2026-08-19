@@ -148,7 +148,12 @@ func (k Keeper) Zap(
 	if isSession, err := k.Sessions.Has(ctx, signer); err != nil {
 		return err
 	} else if isSession {
-		return types.ErrSessionForbidden
+		if _, err := k.GetSession(ctx, signer); err != nil {
+			return err
+		}
+		if amount.GT(sdkmath.NewInt(1_000_000_000_000_000_000)) {
+			return types.ErrInvalidAmount.Wrap("quick zaps are limited to 1 KUD")
+		}
 	}
 	message, err := k.GetMessage(ctx, proposalID, messageID)
 	if err != nil {
@@ -200,17 +205,34 @@ func (k Keeper) AuthorizeSession(
 }
 
 func (k Keeper) RevokeSession(ctx context.Context, owner, session sdk.AccAddress) error {
-	stored, err := k.GetSession(ctx, session)
+	stored, err := k.Sessions.Get(ctx, session)
+	if errors.Is(err, collections.ErrNotFound) {
+		return types.ErrInvalidSession.Wrap("session is not authorized")
+	}
 	if err != nil {
 		return err
 	}
 	if !bytes.Equal(stored.Owner, owner) {
 		return types.ErrUnauthorized
 	}
+	remaining := k.bankKeeper.GetBalance(ctx, session, types.NativeDenom)
+	if remaining.IsPositive() {
+		if err := k.bankKeeper.SendCoins(ctx, session, owner, sdk.NewCoins(remaining)); err != nil {
+			return err
+		}
+	}
 	// Keep an expired tombstone so a funded session cannot become an
 	// independent primary account after revocation.
 	stored.ExpiresAt = 1
 	return k.Sessions.Set(ctx, session, stored)
+}
+
+func (k Keeper) SessionOwner(ctx context.Context, session sdk.AccAddress) (string, error) {
+	stored, err := k.GetSession(ctx, session)
+	if err != nil {
+		return "", err
+	}
+	return k.addressCodec.BytesToString(stored.Owner)
 }
 
 func (k Keeper) resolveAuthor(ctx context.Context, signer sdk.AccAddress) (sdk.AccAddress, error) {
