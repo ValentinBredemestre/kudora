@@ -17,6 +17,8 @@ x-tool: &tool
   image: kudora/e2e-runner:local
   user: "0:0"
   environment:
+    KUDORA_ETH_CHAIN_ID: ${KUDORA_ETH_CHAIN_ID:-0x1d4c1}
+    KUDORA_EVM_CHAIN_ID: ${KUDORA_EVM_CHAIN_ID:-120001}
     KUDORA_MAX_DEPOSIT_PERIOD: ${KUDORA_MAX_DEPOSIT_PERIOD:-8s}
     KUDORA_VOTING_PERIOD: ${KUDORA_VOTING_PERIOD:-8s}
   volumes:
@@ -52,7 +54,7 @@ services:
       - --json-rpc.ws-address
       - 0.0.0.0:8546
       - --evm.evm-chain-id
-      - "120001"
+      - "${KUDORA_EVM_CHAIN_ID:-120001}"
     ports:
       - "${KUDORA_RPC_PORT:-27657}:26657"
       - "${KUDORA_REST_PORT:-27717}:1317"
@@ -78,7 +80,7 @@ services:
       - --grpc-web.enable=false
       - --json-rpc.enable=false
       - --evm.evm-chain-id
-      - "120001"
+      - "${KUDORA_EVM_CHAIN_ID:-120001}"
 
   validator-2:
     <<: *node
@@ -98,7 +100,7 @@ services:
       - --grpc-web.enable=false
       - --json-rpc.enable=false
       - --evm.evm-chain-id
-      - "120001"
+      - "${KUDORA_EVM_CHAIN_ID:-120001}"
 
   e2e-init:
     <<: *tool

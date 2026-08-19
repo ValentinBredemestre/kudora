@@ -11,6 +11,7 @@ DENOM="${KUDORA_DENOM:-akud}"
 REST="${KUDORA_REST_URL:-http://validator-0:1317}"
 RPC="${KUDORA_RPC_URL:-http://validator-0:26657}"
 NODE="tcp://${RPC#http://}"
+EVM_CHAIN_ID="${KUDORA_EVM_CHAIN_ID:-120001}"
 TX_FEES="1000000000000000${DENOM}"
 MODE="${1:-}"
 
@@ -248,11 +249,11 @@ seed_account_activity() {
   local swap_alice="${RESULT_DIR}/account-activity-swap-alice.json"
   local swap_bob="${RESULT_DIR}/account-activity-swap-bob.json"
   local swap_carol="${RESULT_DIR}/account-activity-swap-carol.json"
-  kudora-evm-smoke-helper swap-smoke --rpc-url "http://validator-0:8545" --chain-id 120001 \
+  kudora-evm-smoke-helper swap-smoke --rpc-url "http://validator-0:8545" --chain-id "${EVM_CHAIN_ID}" \
     --sender-key-file "${STATE_DIR}/alice.key" --deployment-file "${deployment}" --result-file "${swap_alice}" --amount-wei "$(to_akud 2)"
-  kudora-evm-smoke-helper swap-smoke --rpc-url "http://validator-0:8545" --chain-id 120001 \
+  kudora-evm-smoke-helper swap-smoke --rpc-url "http://validator-0:8545" --chain-id "${EVM_CHAIN_ID}" \
     --sender-key-file "${STATE_DIR}/bob.key" --deployment-file "${deployment}" --result-file "${swap_bob}" --amount-wei "$(to_akud 1.25)"
-  kudora-evm-smoke-helper swap-smoke --rpc-url "http://validator-0:8545" --chain-id 120001 \
+  kudora-evm-smoke-helper swap-smoke --rpc-url "http://validator-0:8545" --chain-id "${EVM_CHAIN_ID}" \
     --sender-key-file "${STATE_DIR}/carol.key" --deployment-file "${deployment}" --result-file "${swap_carol}" --amount-wei "$(to_akud 0.75)"
   jq -e '.receipt_status == "0x1" and .kud_in == "2000000000000000000"' "${swap_alice}" >/dev/null
   jq -e '.receipt_status == "0x1" and .kud_in == "1250000000000000000"' "${swap_bob}" >/dev/null

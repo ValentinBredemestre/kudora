@@ -6,6 +6,8 @@ STATE_DIR="${KUDORA_E2E_STATE_DIR:-/state}"
 RPC="${KUDORA_RPC_URL:-http://validator-0:26657}"
 REST="${KUDORA_REST_URL:-http://validator-0:1317}"
 EVM_RPC="${KUDORA_EVM_RPC_URL:-http://validator-0:8545}"
+EVM_CHAIN_ID="${KUDORA_EVM_CHAIN_ID:-120001}"
+ETH_CHAIN_ID="${KUDORA_ETH_CHAIN_ID:-0x1d4c1}"
 MODE="${1:-}"
 
 wait_ready() {
@@ -16,7 +18,7 @@ wait_ready() {
       && curl -sf "${REST}/kudora/discussion/v1/params" >/dev/null \
       && curl -sf -H 'Content-Type: application/json' \
         --data '{"jsonrpc":"2.0","method":"eth_chainId","params":[],"id":1}' \
-        "${EVM_RPC}" | jq -e '.result == "0x1d4c1"' >/dev/null; then
+        "${EVM_RPC}" | jq -e --arg chain_id "${ETH_CHAIN_ID}" '.result == $chain_id' >/dev/null; then
       return 0
     fi
     sleep 1
@@ -36,7 +38,7 @@ case "${MODE}" in
     if [[ ! -s "${deployment}" ]]; then
       kudora-evm-smoke-helper swap-deploy \
         --rpc-url "${EVM_RPC}" \
-        --chain-id 120001 \
+        --chain-id "${EVM_CHAIN_ID}" \
         --sender-key-file "${STATE_DIR}/alice.key" \
         --result-file "${deployment}"
     fi
@@ -74,9 +76,9 @@ case "${MODE}" in
       echo "[localnet] governance authority is not queryable" >&2
       exit 1
     fi
-    jq --arg gov_authority "${gov_authority}" '{
+    jq --arg gov_authority "${gov_authority}" --argjson evm_chain_id "${EVM_CHAIN_ID}" '{
       cosmosChainId: .chain_id,
-      evmChainId: 120001,
+      evmChainId: $evm_chain_id,
       denom: "akud",
       displayDenom: "KUD",
       decimals: 18,
